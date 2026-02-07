@@ -9,4 +9,4 @@ This is a simple project for optimising the gemm with comparison to CUBLAS and C
 
 ## License:
 
-Personnal usage only.
+Personal usage only.
