@@ -21,10 +21,10 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(cutlass)
 
 # Add include directories.
-include_directories(common)
+include_directories(include)
 
 # get the executable file.
-add_executable(gemm gemm.cu)
+add_executable(gemm gemm.cu src/kernels.cu)
 target_link_libraries(gemm 
     PRIVATE 
         CUTLASS

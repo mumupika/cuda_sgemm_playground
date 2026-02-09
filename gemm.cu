@@ -16,6 +16,7 @@
 
 #include "helper.h"
 #include "tools.h"
+#include "launcher.cuh"
 
 int main() {
     /// Get the device properties.
@@ -58,6 +59,13 @@ int main() {
     std::free(hA);
     std::free(hB);
     std::free(hC);
+
+    /// Create blocks and grids to map the datas for calculation.
+    dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32), 1);
+    dim3 blockDim(32, 32, 1);
+
+    /// launch the kernel from launcher.
+    launch_sgemm_naive(M, N, K, dA, dB, dC, alpha, beta, gridDim, blockDim);
 
     /// Cudafree hA, hB, hC.
     CUDA_CHECK(cudaFree(dA));
