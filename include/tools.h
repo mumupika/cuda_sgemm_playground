@@ -51,9 +51,9 @@ void prepare_matrix(
     beta = uniform_dist(e);
 
     /// Now copy the data from host to GPU.
-    CUDA_CHECK(cudaMemcpy(dA, hA, sizeof(float) * M * N, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dB, hB, sizeof(float) * N * K, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dC, hC, sizeof(float) * M * K, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(dA, hA, sizeof(float) * M * K, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(dB, hB, sizeof(float) * K * N, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(dC, hC, sizeof(float) * M * N, cudaMemcpyHostToDevice));
 }
 
 void check_data(
@@ -135,11 +135,11 @@ void check_result(
     bool pass = true;
     for (int i = 0; i < M; i++) {
         for (int j = 0; j < N; j++) {
-            if (static_cast<double>(std::abs(reference[i * N + j] - result[i * N + j]) / std::abs(reference[i * N + j])) > 1e-3) {
+            if (static_cast<float>(std::abs(reference[i * N + j] - result[i * N + j]) / std::abs(reference[i * N + j])) > 1e-3) {
                 printf("Result error at (%d, %d):\t\n", i, j);
                 printf("Expected result: %f\n", reference[i * N + j]);
                 printf("Got: %f\n", result[i * N + j]);
-                printf("Miss: %lf\n", static_cast<double>(std::abs(reference[i * N + j] - result[i * N + j]) / std::abs(reference[i * N + j])));
+                printf("Miss: %lf\n", static_cast<float>(std::abs(reference[i * N + j] - result[i * N + j]) / std::abs(reference[i * N + j])));
                 pass = false;
                 goto error;
             }

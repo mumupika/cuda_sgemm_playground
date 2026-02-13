@@ -18,15 +18,39 @@
 #include "tools.h"
 #include "launcher.cuh"
 
-int main() {
-    /// Get the device properties.
-    GetProperties();
+int main(int argc, char *argv[]) {
+    /// print usage.
+    printf("Usage: ./gemm -M [M size] -N [N size] -K [K size] <--no-check>\n");
+    printf("\t\t-M, -N, -K: For the size of A(M, K), B(K, N), C(M, N)\n");
+    printf("\t\t--no-check: Whether to check data's parity with CPU result(may be very slow.)\n\n");
+
 
     /// Matrix Dimension.
     /// Which means: A (M, K) @ B (K, N) * alpha + beta * C (M, N);
     int M = 64;
     int N = 64;
     int K = 64;
+    bool check_result_flag = true;
+
+    /// Get the input parse.
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-M") == 0) {
+            M = atoi(argv[i + 1]);
+            i++;
+        } else if (strcmp(argv[i], "-N") == 0) {
+            N = atoi(argv[i + 1]);
+            i++;
+        } else if (strcmp(argv[i], "-K") == 0) {
+            K = atoi(argv[i + 1]);
+            i++;
+        } else if(strcmp(argv[i], "--no-check") == 0) {
+            check_result_flag = false;
+        }
+    }
+
+
+    /// Get the device properties.
+    GetProperties();
 
     /// host data.
     float *hA;
@@ -63,7 +87,10 @@ int main() {
     launch_sgemm_naive(M, N, K, dA, dB, dC, alpha, beta, gridDim, blockDim);
 
     /// Check the data's correctivity.
-    check_result(M, N, K, hA, hB, hC, dC, alpha, beta);
+    if (check_result_flag) {
+        printf("Check enabled. Checking...\n");
+        check_result(M, N, K, hA, hB, hC, dC, alpha, beta);
+    }
 
     /// free hA, hB, hC.
     std::free(hA);
