@@ -40,12 +40,12 @@ int main(int argc, char *argv[]) {
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-M") == 0 || strcmp(argv[i], "-N") == 0 || strcmp(argv[i], "-K") == 0) {
             if (i + 1 >= argc) {
-                perror("Should have a trailing dimension number!\n");
+                fprintf(stderr, "Should have a trailing dimension number!\n");
                 exit(-1);
             }
             int val = atoi(argv[i + 1]);
             if (val <= 0) {
-                perror("Dimension should be positive!\n");
+                fprintf(stderr, "Should have a trailing dimension number!\n");
                 exit(-1);
             }
             if (strcmp(argv[i], "-M") == 0) {
