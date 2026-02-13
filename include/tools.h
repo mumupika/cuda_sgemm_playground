@@ -4,6 +4,7 @@
 #include "cuda_runtime.h"
 
 /// C headers.
+#include <cstdio>
 #include <stdio.h>
 
 /// C++ headers.
@@ -34,13 +35,13 @@ void GetProperties() {
 void prepare_matrix(
     int M, int N, int K,                    // Dimensions;
     float *hA, float *hB, float *hC,        // Host data;
-    float *&dA, float *&dB, float *&dC,     // Device Data;
+    float *dA, float *dB, float *dC,     // Device Data;
     float &alpha, float &beta               // bias.
 ) {
     /// Prepare the data. generate uniformed float.
     std::random_device r;
     std::mt19937_64 e(r());
-    std::uniform_real_distribution<float> uniform_dist(-3.0, 3.0);
+    std::uniform_real_distribution<float> uniform_dist(-9.0, 9.0);
     for (size_t i = 0; i < M * N; i++) {
         hA[i] = uniform_dist(e);
         hB[i] = uniform_dist(e);
@@ -105,4 +106,52 @@ void check_data(
     std::free(chA);
     std::free(chB);
     std::free(chC);
+}
+
+void check_result(
+    int const M, int const N, int const K,                    // Dimensions;
+    float const *hA, float const *hB, float const *hC,        // Host data;
+    float const *dC,                                          // Device Data;
+    float const alpha, float const beta                       // bias.
+) {
+    float *result = static_cast<float *>(std::malloc(sizeof(float) * M * N));
+
+    /// copy the data back.
+    CUDA_CHECK(cudaMemcpy(result, dC, sizeof(float) * M * N, cudaMemcpyDeviceToHost));
+
+    /// CPU calculation.
+    float *reference = static_cast<float *>(std::malloc(sizeof(float) * M * N));
+    for (int i = 0; i < M; i++) {
+        for (int j = 0; j < N; j++) {
+            float sum = 0.0f;
+            for (int k = 0; k < K; k++) {
+                sum += hA[i * K + k] * hB[j + k * N];
+            }
+            reference[i * N + j] = alpha * sum + beta * hC[i * N + j];
+        }
+    }
+
+    /// Check parity.
+    bool pass = true;
+    for (int i = 0; i < M; i++) {
+        for (int j = 0; j < N; j++) {
+            if (static_cast<double>(std::abs(reference[i * N + j] - result[i * N + j]) / std::abs(reference[i * N + j])) > 1e-3) {
+                printf("Result error at (%d, %d):\t\n", i, j);
+                printf("Expected result: %f\n", reference[i * N + j]);
+                printf("Got: %f\n", result[i * N + j]);
+                printf("Miss: %lf\n", static_cast<double>(std::abs(reference[i * N + j] - result[i * N + j]) / std::abs(reference[i * N + j])));
+                pass = false;
+                goto error;
+            }
+        }
+    }
+
+error:
+    std::free(result);
+    std::free(reference);
+    if (pass == true) {
+        printf("Congratulations, passed!\n");
+    } else {
+        printf("Failed to pass!\n");
+    }
 }

@@ -16,7 +16,7 @@
 
 /**
  * @brief The naive Gemm implementation.
- * @brief sgemm for Matrix A(M, N), B(N, K), C(M, K) has alpha * A @ B + beta * C for calculation.
+ * @brief sgemm for Matrix A(M, K), B(K, N), C(M, N) has alpha * A @ B + beta * C for calculation.
  */
 __global__ void sgemm_naive(int M, int N, int K, float alpha, const float *A, const float *B, float beta, float *C) {
     const uint x = blockIdx.x * blockDim.x + threadIdx.x;
