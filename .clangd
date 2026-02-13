@@ -33,8 +33,13 @@ CompileFlags:
         - "--generate-code=arch=compute_110,code=[compute_110]"
         - "--generate-code=arch=compute_110a,code=[sm_110a]"
         - "--generate-code=arch=compute_110a,code=[compute_110a]"
+        - "--generate-code=*"
         - "-Xcompiler=-fPIE"
         - "--expt-relaxed-constexpr"
         - "-Xcompiler=-Wconversion"
         - "-Xcompiler=-fno-strict-aliasing"
         - "-Xcompiler=-fPIC"
+    Add:
+        - "-ferror-limit=0"
+        - "-I/usr/local/cuda/include/cccl"
+        - "-U__clang__"
