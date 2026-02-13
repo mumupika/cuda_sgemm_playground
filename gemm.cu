@@ -11,6 +11,11 @@
  *
  */
 
+/// C++ header.
+#include <cassert>
+#include <cstdio>
+#include <cstring>
+
 /// CUDA RUNTIME.
 #include "cuda_runtime.h"
 
@@ -24,7 +29,6 @@ int main(int argc, char *argv[]) {
     printf("\t\t-M, -N, -K: For the size of A(M, K), B(K, N), C(M, N)\n");
     printf("\t\t--no-check: Whether to check data's parity with CPU result(may be very slow.)\n\n");
 
-
     /// Matrix Dimension.
     /// Which means: A (M, K) @ B (K, N) * alpha + beta * C (M, N);
     int M = 64;
@@ -34,20 +38,27 @@ int main(int argc, char *argv[]) {
 
     /// Get the input parse.
     for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-M") == 0) {
-            M = atoi(argv[i + 1]);
-            i++;
-        } else if (strcmp(argv[i], "-N") == 0) {
-            N = atoi(argv[i + 1]);
-            i++;
-        } else if (strcmp(argv[i], "-K") == 0) {
-            K = atoi(argv[i + 1]);
-            i++;
-        } else if(strcmp(argv[i], "--no-check") == 0) {
+        if (strcmp(argv[i], "-M") == 0 || strcmp(argv[i], "-N") == 0 || strcmp(argv[i], "-K") == 0) {
+            if (i + 1 >= argc) {
+                perror("Should have a trailing dimension number!\n");
+                exit(-1);
+            }
+            int val = atoi(argv[i + 1]);
+            if (val <= 0) {
+                perror("Dimension should be positive!\n");
+                exit(-1);
+            }
+            if (strcmp(argv[i], "-M") == 0) {
+                M = val;
+            } else if (strcmp(argv[i], "-N") == 0) {
+                N = val;
+            } else if (strcmp(argv[i], "-K") == 0) {
+                K = val;
+            }
+        } else if (strcmp(argv[i], "--no-check") == 0) {
             check_result_flag = false;
         }
     }
-
 
     /// Get the device properties.
     GetProperties();
