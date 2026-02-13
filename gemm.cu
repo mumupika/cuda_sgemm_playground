@@ -55,6 +55,7 @@ int main(int argc, char *argv[]) {
             } else if (strcmp(argv[i], "-K") == 0) {
                 K = val;
             }
+            i++;
         } else if (strcmp(argv[i], "--no-check") == 0) {
             check_result_flag = false;
         }

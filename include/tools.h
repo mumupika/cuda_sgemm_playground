@@ -142,7 +142,7 @@ void check_result(
                 printf("Result error at (%d, %d):\t\n", i, j);
                 printf("Expected result: %f\n", reference[i * N + j]);
                 printf("Got: %f\n", result[i * N + j]);
-                printf("Miss: %lf\n", static_cast<float>(std::abs(reference[i * N + j] - result[i * N + j]) / std::abs(reference[i * N + j])));
+                printf("Miss: %lf\n", static_cast<float>(std::abs(reference[i * N + j] - result[i * N + j]) / std::abs(reference[i * N + j] + 1e-10)));
                 pass = false;
                 break;
             }
