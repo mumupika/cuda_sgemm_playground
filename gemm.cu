@@ -11,21 +11,58 @@
  *
  */
 
+/// C++ header.
+#include <cassert>
+#include <cstdio>
+#include <cstring>
+
 /// CUDA RUNTIME.
 #include "cuda_runtime.h"
 
 #include "helper.h"
 #include "tools.h"
+#include "launcher.cuh"
 
-int main() {
-    /// Get the device properties.
-    GetProperties();
+int main(int argc, char *argv[]) {
+    /// print usage.
+    printf("Usage: ./gemm -M [M size] -N [N size] -K [K size] <--no-check>\n");
+    printf("\t\t-M, -N, -K: For the size of A(M, K), B(K, N), C(M, N)\n");
+    printf("\t\t--no-check: Whether to check data's parity with CPU result(may be very slow.)\n\n");
 
     /// Matrix Dimension.
-    /// Which means: A (M, N) @ B (N, K) * alpha + beta * C (M, K);
-    int M = 4096;
-    int N = 4096;
-    int K = 4096;
+    /// Which means: A (M, K) @ B (K, N) * alpha + beta * C (M, N);
+    int M = 64;
+    int N = 64;
+    int K = 64;
+    bool check_result_flag = true;
+
+    /// Get the input parse.
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-M") == 0 || strcmp(argv[i], "-N") == 0 || strcmp(argv[i], "-K") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "Should have a trailing dimension number!\n");
+                exit(-1);
+            }
+            int val = atoi(argv[i + 1]);
+            if (val <= 0) {
+                fprintf(stderr, "Should have a trailing dimension number!\n");
+                exit(-1);
+            }
+            if (strcmp(argv[i], "-M") == 0) {
+                M = val;
+            } else if (strcmp(argv[i], "-N") == 0) {
+                N = val;
+            } else if (strcmp(argv[i], "-K") == 0) {
+                K = val;
+            }
+            i++;
+        } else if (strcmp(argv[i], "--no-check") == 0) {
+            check_result_flag = false;
+        }
+    }
+
+    /// Get the device properties.
+    GetProperties();
 
     /// host data.
     float *hA;
@@ -33,9 +70,9 @@ int main() {
     float *hC;
 
     /// malloc hA, hB, hC.
-    hA = static_cast<float *>(std::malloc(sizeof(float) * M * N));
-    hB = static_cast<float *>(std::malloc(sizeof(float) * N * K));
-    hC = static_cast<float *>(std::malloc(sizeof(float) * M * K));
+    hA = static_cast<float *>(std::malloc(sizeof(float) * M * K));
+    hB = static_cast<float *>(std::malloc(sizeof(float) * K * N));
+    hC = static_cast<float *>(std::malloc(sizeof(float) * M * N));
 
     /// device data.
     float *dA;
@@ -43,9 +80,9 @@ int main() {
     float *dC;
 
     /// Here is the GPU take in. cudaMalloc dA, dB, dC in `prepare_matrix`.
-    CUDA_CHECK(cudaMalloc(&dA, sizeof(float) * M * N));
-    CUDA_CHECK(cudaMalloc(&dB, sizeof(float) * N * K));
-    CUDA_CHECK(cudaMalloc(&dC, sizeof(float) * M * K));
+    CUDA_CHECK(cudaMalloc(&dA, sizeof(float) * M * K));
+    CUDA_CHECK(cudaMalloc(&dB, sizeof(float) * K * N));
+    CUDA_CHECK(cudaMalloc(&dC, sizeof(float) * M * N));
 
     /// Bias.
     float alpha;
@@ -53,6 +90,19 @@ int main() {
 
     prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
     check_data(hA, hB, hC, dA, dB, dC);
+
+    /// Create blocks and grids to map the datas for calculation.
+    dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32), 1);
+    dim3 blockDim(32, 32, 1);
+
+    /// launch the kernel from launcher.
+    launch_sgemm_naive(M, N, K, dA, dB, dC, alpha, beta, gridDim, blockDim);
+
+    /// Check the data's correctivity.
+    if (check_result_flag) {
+        printf("Check enabled. Checking...\n");
+        check_result(M, N, K, hA, hB, hC, dC, alpha, beta);
+    }
 
     /// free hA, hB, hC.
     std::free(hA);
