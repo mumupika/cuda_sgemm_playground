@@ -77,3 +77,20 @@ void prepare_matrix(
     CUDA_CHECK(cudaMemcpy(dB, hB, sizeof(float) * K * N, cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(dC, hC, sizeof(float) * M * N, cudaMemcpyHostToDevice));
 }
+
+void get_cpu_result(
+    int const M, int const N, int const K,             // Dimensions;
+    float const *hA, float const *hB, float const *hC, // Host data;
+    float *reference,                                  // Device Data;
+    float const alpha, float const beta                // bias.
+) {
+    for (int i = 0; i < M; i++) {
+        for (int j = 0; j < N; j++) {
+            float sum = 0.0f;
+            for (int k = 0; k < K; k++) {
+                sum += hA[i * K + k] * hB[j + k * N];
+            }
+            reference[i * N + j] = alpha * sum + beta * hC[i * N + j];
+        }
+    }
+}

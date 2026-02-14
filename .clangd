@@ -39,6 +39,11 @@ CompileFlags:
         - "-Xcompiler=-Wconversion"
         - "-Xcompiler=-fno-strict-aliasing"
         - "-Xcompiler=-fPIC"
+
+---
+If:
+    PathMatch: src/cutlass\.cu
+CompileFlags:
     Add:
         - "-ferror-limit=0"
         - "-I/usr/local/cuda/include/cccl"

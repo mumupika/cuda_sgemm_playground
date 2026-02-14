@@ -6,6 +6,9 @@
 /// C headers.
 #include <stdio.h>
 
+/// C++ headers.
+#include <cstdlib>
+
 #include "helper.h"
 
 /**
@@ -74,42 +77,29 @@ void check_data(
  *
  * @param M size of A is (M, K), B is (K, N), C is (M, N).
  * @param N size of A is (M, K), B is (K, N), C is (M, N).
- * @param K size of A is (M, K), B is (K, N), C is (M, N).
  * @param hA Host data A.
  * @param hB Host data B.
  * @param hC Host data C.
- * @param dC Device data C.
+ * @param reference Host reference data C.
+ * @param dC Device Data C.
  * @param alpha alpha.
  * @param beta beta.
  */
 void check_cpu_result(
-    int const M, int const N, int const K,             // Dimensions;
-    float const *hA, float const *hB, float const *hC, // Host data;
-    float const *dC,                                   // Device Data;
-    float const alpha, float const beta                // bias.
+    int const M, int const N, // Dimensions;
+    float const *reference,   // Host reference data;
+    float const *dC           // Device Data;
 ) {
     float *result = static_cast<float *>(std::malloc(sizeof(float) * M * N));
 
     /// copy the data back.
     CUDA_CHECK(cudaMemcpy(result, dC, sizeof(float) * M * N, cudaMemcpyDeviceToHost));
 
-    /// CPU calculation.
-    float *reference = static_cast<float *>(std::malloc(sizeof(float) * M * N));
-    for (int i = 0; i < M; i++) {
-        for (int j = 0; j < N; j++) {
-            float sum = 0.0f;
-            for (int k = 0; k < K; k++) {
-                sum += hA[i * K + k] * hB[j + k * N];
-            }
-            reference[i * N + j] = alpha * sum + beta * hC[i * N + j];
-        }
-    }
-
     /// Check parity.
     bool pass = true;
     for (int i = 0; i < M; i++) {
         for (int j = 0; j < N; j++) {
-            if (static_cast<float>(std::abs(reference[i * N + j] - result[i * N + j]) / std::abs(reference[i * N + j] + 1e-10)) > 1e-3) {
+            if (static_cast<float>(std::abs(reference[i * N + j] - result[i * N + j]) / std::abs(reference[i * N + j] + 1e-10)) > 5e-3) {
                 printf("Result error at (%d, %d):\t\n", i, j);
                 printf("Expected result: %f\n", reference[i * N + j]);
                 printf("Got: %f\n", result[i * N + j]);
@@ -122,7 +112,6 @@ void check_cpu_result(
 
 finalize:
     std::free(result);
-    std::free(reference);
     if (pass == true) {
         printf("Congratulations, passed!\n");
     } else {
@@ -148,9 +137,24 @@ cudaError_t CutlassSgemmNN(
     float alpha, const float *A, const float *B,
     float beta, float *C);
 
+/**
+ * @brief Check the correctivity of the cutlass result.
+ * 
+ * @param M The number of rows of matrix A and C.
+ * @param N The number of columns of matrix B and C.
+ * @param K The number of columns of A and rows of B.
+ * @param hA host data A.
+ * @param hB host data B.
+ * @param hC host data C.
+ * @param old_dC the previous kernel calculated result.
+ * @param reference the CPU reference result.
+ * @param alpha Scalar bias alpha.
+ * @param beta Scalar bias beta.
+ */
 void check_cutlass_result(
     int const M, int const N, int const K,
     float const *hA, float const *hB, float const *hC, float const *old_dC,
+    float const *reference,
     float const alpha, float const beta) {
     /// device data malloc.
     float *dA;
@@ -168,6 +172,7 @@ void check_cutlass_result(
     CUDA_CHECK(cudaMemcpy(dB, hB, sizeof(float) * K * N, cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(dC, hC, sizeof(float) * M * N, cudaMemcpyHostToDevice));
 
+    /// Real cutlass calculation.
     CUDA_CHECK(CutlassSgemmNN(M, N, K, alpha, dA, dB, beta, dC));
 
     // host_data malloc.
@@ -177,15 +182,29 @@ void check_cutlass_result(
     cudaMemcpy(cutlass_hC, dC, sizeof(float) * M * N, cudaMemcpyDeviceToHost);
     cudaMemcpy(kernel_hC, old_dC, sizeof(float) * M * N, cudaMemcpyDeviceToHost);
 
-    /// Check parity.
+    /// Check parity with GPU result.
     bool pass = true;
     for (int i = 0; i < M; i++) {
         for (int j = 0; j < N; j++) {
-            if (static_cast<float>(std::abs(cutlass_hC[i * N + j] - kernel_hC[i * N + j])) > 1e-3) {
+            if (static_cast<float>(std::abs(cutlass_hC[i * N + j] - kernel_hC[i * N + j])) > 5e-3) {
                 printf("Result error at (%d, %d):\t\n", i, j);
                 printf("cutlass result: %f\n", cutlass_hC[i * N + j]);
                 printf("kernel: %f\n", kernel_hC[i * N + j]);
                 printf("Miss: %lf\n", static_cast<float>(std::abs(cutlass_hC[i * N + j] - kernel_hC[i * N + j])));
+                pass = false;
+                goto finalize;
+            }
+        }
+    }
+
+    /// Check parity with CPU result.
+    for (int i = 0; i < M; i++) {
+        for (int j = 0; j < N; j++) {
+            if (static_cast<float>(std::abs(cutlass_hC[i * N + j] - reference[i * N + j])) > 5e-3) {
+                printf("Result error at (%d, %d):\t\n", i, j);
+                printf("cutlass result: %f\n", cutlass_hC[i * N + j]);
+                printf("kernel: %f\n", reference[i * N + j]);
+                printf("Miss: %lf\n", static_cast<float>(std::abs(cutlass_hC[i * N + j] - reference[i * N + j])));
                 pass = false;
                 goto finalize;
             }

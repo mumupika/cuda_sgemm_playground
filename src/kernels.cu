@@ -11,7 +11,7 @@
 
 #include "cuda_runtime.h"
 
-#include "launcher.cuh"
+#include "launcher.h"
 #include "helper.h"
 
 /**
