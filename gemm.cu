@@ -11,17 +11,13 @@
  *
  */
 
-/// C++ header.
-#include <cassert>
-#include <cstdio>
-#include <cstring>
-
 /// CUDA RUNTIME.
 #include "cuda_runtime.h"
 
 #include "helper.h"
 #include "tools.h"
-#include "launcher.cuh"
+#include "launcher.h"
+#include "checker.h"
 
 int main(int argc, char *argv[]) {
     /// print usage.
@@ -100,8 +96,15 @@ int main(int argc, char *argv[]) {
 
     /// Check the data's correctivity.
     if (check_result_flag) {
-        printf("Check enabled. Checking...\n");
-        check_result(M, N, K, hA, hB, hC, dC, alpha, beta);
+        printf("==========================================================\n");
+        printf("Check with cpu result enabled. Checking...\n");
+        float *reference = static_cast<float *>(std::malloc(sizeof(float) * M * N));
+        get_cpu_result(M, N, K, hA, hB, hC, reference, alpha, beta);
+        check_cpu_result(M, N, reference, dC);
+        printf("==========================================================\n");
+        printf("Check with cutlass result. Checking...\n");
+        check_cutlass_result(M, N, K, hA, hB, hC, dC, reference, alpha, beta);
+        std::free(reference);
     }
 
     /// free hA, hB, hC.

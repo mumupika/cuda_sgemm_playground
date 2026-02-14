@@ -6,7 +6,7 @@ find_package(Git REQUIRED)
 find_package(CUDAToolkit REQUIRED)
 
 set(CUTLASS_ENABLE_HEADERS_ONLY ON CACHE BOOL "Enable only the header library" FORCE)
-set(CUTLASS_NVCC_ARCHS "100a" CACHE STRING "The SM architectures requested.")
+set(CUTLASS_NVCC_ARCHS "100" CACHE STRING "The SM architectures requested.")
 
 # FetchContent for the ceiling line of the GEMM.
 include(FetchContent)
@@ -21,10 +21,21 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(cutlass)
 
 # Add include directories.
-include_directories(include)
+include_directories(include third-party/include)
+
+# set CXX standard.
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# set CUDA standard.
+set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+
+# cuda architectures.
+set(CMAKE_CUDA_ARCHITECTURES 100)
 
 # get the executable file.
-add_executable(gemm gemm.cu src/kernels.cu)
+add_executable(gemm gemm.cu src/kernels.cu src/cutlass.cu)
 target_link_libraries(gemm 
     PRIVATE 
         CUTLASS
