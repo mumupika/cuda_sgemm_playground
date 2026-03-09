@@ -39,6 +39,7 @@ CompileFlags:
         - "-Xcompiler=-Wconversion"
         - "-Xcompiler=-fno-strict-aliasing"
         - "-Xcompiler=-fPIC"
+        - "-rdc=true"
 
 ---
 If:

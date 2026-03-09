@@ -1,5 +1,12 @@
 cmake_minimum_required(VERSION 3.20)
 
+# set clang21 for our project.
+set(CMAKE_PREFIX_PATH "/home/linuxbrew/.linuxbrew/opt/llvm@21")
+set(CMAKE_EXE_LINKER_FLAGS "-L/home/linuxbrew/.linuxbrew/opt/llvm@21/lib")
+set(CMAKE_CXX_FLAGS "-I/home/linuxbrew/.linuxbrew/opt/llvm@21/include")
+set(CMAKE_C_COMPILER "/home/linuxbrew/.linuxbrew/opt/llvm@21/bin/clang")
+set(CMAKE_CXX_COMPILER "/home/linuxbrew/.linuxbrew/opt/llvm@21/bin/clang++")
+
 project(gemm LANGUAGES C CXX CUDA)
 
 find_package(Git REQUIRED)
@@ -7,6 +14,12 @@ find_package(CUDAToolkit REQUIRED)
 
 set(CUTLASS_ENABLE_HEADERS_ONLY ON CACHE BOOL "Enable only the header library" FORCE)
 set(CUTLASS_NVCC_ARCHS "100" CACHE STRING "The SM architectures requested.")
+set(CUTLASS_CUDA_USE_RESPONSE_FILE OFF FORCE)
+
+# set --options-file off.
+set(CMAKE_CUDA_USE_RESPONSE_FILE_FOR_INCLUDES 0)
+set(CMAKE_CUDA_USE_RESPONSE_FILE_FOR_LIBRARIES 0)
+set(CMAKE_CUDA_USE_RESPONSE_FILE_FOR_OBJECTS 0)
 
 # FetchContent for the ceiling line of the GEMM.
 include(FetchContent)
@@ -33,9 +46,18 @@ set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
 # cuda architectures.
 set(CMAKE_CUDA_ARCHITECTURES 100)
+set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
+set(CMAKE_CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 
 # get the executable file.
-add_executable(gemm gemm.cu src/kernels.cu src/cutlass.cu)
+add_executable(gemm 
+    gemm.cu
+    src/running.cu
+    src/kernels.cu 
+    src/cutlass.cu
+    src/tools.cu
+)
+
 target_link_libraries(gemm 
     PRIVATE 
         CUTLASS
