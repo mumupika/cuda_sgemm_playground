@@ -40,7 +40,7 @@ void prepare_matrix(
     /// Prepare the data. generate uniformed float.
     std::random_device r;
     std::mt19937_64 e(r());
-    std::uniform_real_distribution<float> uniform_dist(-9.0, 9.0);
+    std::uniform_real_distribution<float> uniform_dist(-2.0, 2.0);
     for (size_t i = 0; i < M * K; i++) {
         hA[i] = uniform_dist(e);
     }
