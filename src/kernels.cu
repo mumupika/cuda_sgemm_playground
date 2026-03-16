@@ -13,6 +13,7 @@
 
 #include "launcher.h"
 #include "helper.h"
+#include "cublas_v2.h"
 
 /**
  * @brief The naive Gemm implementation.
@@ -76,4 +77,23 @@ void launch_sgemm_coalescing(
     dim3 gridDim, dim3 blockDim, int const blockSize,
     size_t sharedMemSize, cudaStream_t stream) {
     sgemm_coalescing<<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, alpha, A, B, beta, C, blockSize);
+}
+
+cublasStatus_t CublasLauncher(
+    int M, int N, int K,
+    float alpha, const float *A, const float *B,
+    float beta, float *C) {
+    cublasHandle_t handle;
+    CUBLAS_CHECK(cublasCreate(&handle));
+    CUBLAS_CHECK(cublasSgemm(
+        handle,
+        CUBLAS_OP_N, CUBLAS_OP_N,
+        N, M, K,
+        &alpha,
+        B, N,
+        A, K,
+        &beta,
+        C, N));
+    CUBLAS_CHECK(cublasDestroy(handle));
+    return CUBLAS_STATUS_SUCCESS;
 }

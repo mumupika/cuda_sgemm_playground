@@ -2,6 +2,7 @@
 
 /// CUDA RUNTIME.
 #include "cuda_runtime.h"
+#include "cublas_v2.h"
 
 /// C headers.
 #include <stdio.h>
@@ -30,6 +31,19 @@
                    cudaGetErrorString(error), __LINE__);    \
             exit(EXIT_FAILURE);                             \
         }                                                   \
+    }
+
+/**
+ * Panic Wrapper for unwinding CUBLAS runtime errors
+ */
+#define CUBLAS_CHECK(status)                                  \
+    {                                                         \
+        cublasStatus_t error = status;                        \
+        if (error != CUBLAS_STATUS_SUCCESS) {                 \
+            printf("Got bad cublas status: %s at line: %d\n", \
+                   cublasGetStatusName(error), __LINE__);     \
+            exit(EXIT_FAILURE);                               \
+        }                                                     \
     }
 
 /**
