@@ -31,7 +31,6 @@ int main(int argc, char *argv[]) {
     int N = 64;
     int K = 64;
     bool check_result_flag = true;
-    bool use_cpu = true;
 
     /// Get the input parse.
     for (int i = 1; i < argc; i++) {
@@ -54,9 +53,6 @@ int main(int argc, char *argv[]) {
             }
             i++;
         } else if (strcmp(argv[i], "--no-check") == 0) {
-            check_result_flag = false;
-        } else if (strcmp(argv[i], "--no-cpu") == 0) {
-            use_cpu = false;
             check_result_flag = false;
         }
     }
@@ -92,9 +88,10 @@ int main(int argc, char *argv[]) {
     float beta;
 
     /// execute naive sgemm.
-    run_kernel1(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag, use_cpu);
-    run_kernel2(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag, use_cpu);
-    run_cutlass(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag, use_cpu);
+    run_kernel1(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
+    run_kernel2(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
+    run_cutlass(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
+    run_cublas(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
 
     /// free hA, hB, hC.
     std::free(hA);

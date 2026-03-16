@@ -56,6 +56,7 @@ add_executable(gemm
     src/kernels.cu 
     src/cutlass.cu
     src/tools.cu
+    src/checker.cu
 )
 
 target_link_libraries(gemm 

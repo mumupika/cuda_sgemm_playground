@@ -3,14 +3,12 @@
 #include "running.h"
 #include "tools.h"
 
-
 void run_kernel1(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
     float &alpha, float &beta,
-    bool const check_result_flag, bool const use_cpu
-) {
+    bool const check_result_flag) {
     prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
     if (check_result_flag) {
         check_data(hA, hB, hC, dA, dB, dC);
@@ -36,12 +34,7 @@ void run_kernel1(
         get_cpu_result(M, N, K, hA, hB, hC, reference, alpha, beta);
         check_cpu_result(M, N, reference, dC);
         printf("==========================================================\n");
-        printf("Check with cutlass result. Checking...\n");
-        check_cutlass_result(M, N, K, hA, hB, hC, dC, reference, alpha, beta);
         std::free(reference);
-    } else if (use_cpu) {
-        float *reference = static_cast<float *>(std::malloc(sizeof(float) * M * N));
-        get_cpu_result(M, N, K, hA, hB, hC, reference, alpha, beta);
     }
 }
 
@@ -50,8 +43,7 @@ void run_kernel2(
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
     float &alpha, float &beta,
-    bool const check_result_flag, bool const use_cpu
-) {
+    bool const check_result_flag) {
     prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
     if (check_result_flag) {
         check_data(hA, hB, hC, dA, dB, dC);
@@ -78,12 +70,7 @@ void run_kernel2(
         get_cpu_result(M, N, K, hA, hB, hC, reference, alpha, beta);
         check_cpu_result(M, N, reference, dC);
         printf("==========================================================\n");
-        printf("Check with cutlass result. Checking...\n");
-        check_cutlass_result(M, N, K, hA, hB, hC, dC, reference, alpha, beta);
         std::free(reference);
-    } else if (use_cpu) {
-        float *reference = static_cast<float *>(std::malloc(sizeof(float) * M * N));
-        get_cpu_result(M, N, K, hA, hB, hC, reference, alpha, beta);
     }
 }
 
@@ -92,8 +79,7 @@ void run_cutlass(
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
     float &alpha, float &beta,
-    bool const check_result_flag, bool const use_cpu
-) {
+    bool const check_result_flag) {
     prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
     if (check_result_flag) {
         check_data(hA, hB, hC, dA, dB, dC);
@@ -106,8 +92,45 @@ void run_cutlass(
     time.stop();
 
     printf("Cutlass basic example: GPU executed elapsed: %f ms\n", time.elapsed_millis());
-    if (use_cpu) {
+    /// Check the data's correctivity.
+    if (check_result_flag) {
+        printf("==========================================================\n");
+        printf("Check with cpu result enabled. Checking...\n");
         float *reference = static_cast<float *>(std::malloc(sizeof(float) * M * N));
         get_cpu_result(M, N, K, hA, hB, hC, reference, alpha, beta);
+        check_cpu_result(M, N, reference, dC);
+        printf("==========================================================\n");
+        std::free(reference);
+    }
+}
+
+void run_cublas(
+    int const M, int const N, int const K,
+    float *hA, float *hB, float *hC,
+    float *dA, float *dB, float *dC,
+    float &alpha, float &beta,
+    bool const check_result_flag) {
+    prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
+    if (check_result_flag) {
+        check_data(hA, hB, hC, dA, dB, dC);
+    }
+
+    /// launch the kernel from launcher.
+    GpuTimer time{};
+    time.start();
+    CublasLauncher(M, N, K, alpha, dA, dB, beta, dC);
+    time.stop();
+
+    printf("Cublas basic example: GPU executed elapsed: %f ms\n", time.elapsed_millis());
+
+    /// Check the data's correctivity.
+    if (check_result_flag) {
+        printf("==========================================================\n");
+        printf("Check with cpu result enabled. Checking...\n");
+        float *reference = static_cast<float *>(std::malloc(sizeof(float) * M * N));
+        get_cpu_result(M, N, K, hA, hB, hC, reference, alpha, beta);
+        check_cpu_result(M, N, reference, dC);
+        printf("==========================================================\n");
+        std::free(reference);
     }
 }
