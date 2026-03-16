@@ -94,5 +94,6 @@ cublasStatus_t CublasLauncher(
         A, K,
         &beta,
         C, N));
+    CUBLAS_CHECK(cublasDestroy(handle));
     return CUBLAS_STATUS_SUCCESS;
 }
