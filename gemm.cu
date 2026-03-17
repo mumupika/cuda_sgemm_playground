@@ -91,6 +91,7 @@ int main(int argc, char *argv[]) {
     run_kernel1(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
     run_kernel2(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
     run_kernel3(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
+    run_kernel4(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
     run_cutlass(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
     run_cublas(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
 

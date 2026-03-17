@@ -152,6 +152,63 @@ void launch_sgemm_smem(
     float alpha, float beta,
     dim3 gridDim, dim3 blockDim, int const tileSize,
     size_t sharedMemSize, cudaStream_t stream) {
-    sharedMemSize = 2 * tileSize * tileSize * sizeof(float);
     sgemm_smem<<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, alpha, A, B, beta, C, tileSize);
+}
+
+
+__global__ void sgemm_smem_opt(
+    int M, int N, int K,
+    float alpha,
+    const float *A, const float *B,
+    float beta, float *C,
+    int tileSize) {
+    // Shared memory has the same location when dynamically allocated during launching.
+    extern __shared__ float smem[];
+    float *As = smem;
+    float *Bs = &smem[tileSize * tileSize];
+    // the threadidx inside this block, the blockIdx in global grid.
+    int tx = threadIdx.x;
+    int ty = threadIdx.y;
+    int bx = blockIdx.x;
+    int by = blockIdx.y;
+    // Global row and Global col.
+    int row_c = bx * tileSize + tx;
+    int col_c = by * tileSize + ty;
+    float sum = 0;
+    // Load the block into the Shared Memory.
+    for (int k_out = 0; k_out < K; k_out += tileSize) {
+        int row_a = bx * tileSize + tx;
+        int col_a = k_out + ty;
+        if (row_a < M && col_a < K) {
+            As[ty * tileSize + tx] = A[row_a * K + col_a];
+        } else {
+            As[ty * tileSize + tx] = 0;
+        }
+
+        int row_b = k_out + tx;
+        int col_b = by * tileSize + ty;
+        if (row_b < K && col_b < N) {
+            Bs[ty * tileSize + tx] = B[row_b * N + col_b];
+        } else {
+            Bs[ty * tileSize + tx] = 0;
+        }
+        __syncthreads();
+        for (int k_in = 0; k_in < tileSize; k_in++) {
+            sum += As[k_in * tileSize + tx] * Bs[ty * tileSize + k_in];
+        }
+        __syncthreads();
+    }
+
+    if (row_c < M && col_c < N) {
+        C[row_c * N + col_c] = alpha * sum + beta * C[row_c * N + col_c];
+    }
+}
+
+void launch_sgemm_smem_opt(
+    int M, int N, int K,
+    const float *A, const float *B, float *C,
+    float alpha, float beta,
+    dim3 gridDim, dim3 blockDim, int const tileSize,
+    size_t sharedMemSize, cudaStream_t stream) {
+    sgemm_smem_opt<<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, alpha, A, B, beta, C, tileSize);
 }
