@@ -64,7 +64,7 @@ cudaError_t CutlassSgemmNN(
     float beta, float *C);
 
 /**
- * @brief Check the correctivity of the cutlass result.
+ * @brief Check the correctivity with the cutlass result.
  *
  * @param M The number of rows of matrix A and C.
  * @param N The number of columns of matrix B and C.
@@ -80,5 +80,23 @@ cudaError_t CutlassSgemmNN(
 void check_cutlass_result(
     int const M, int const N, int const K,
     float const *hA, float const *hB, float const *hC, float const *old_dC,
-    float const *reference,
+    float const alpha, float const beta);
+
+/**
+ * @brief Check the correctivity with the cublas result.
+ *
+ * @param M The number of rows of matrix A and C.
+ * @param N The number of columns of matrix B and C.
+ * @param K The number of columns of A and rows of B.
+ * @param hA host data A.
+ * @param hB host data B.
+ * @param hC host data C.
+ * @param old_dC the previous kernel calculated result.
+ * @param reference the CPU reference result.
+ * @param alpha Scalar bias alpha.
+ * @param beta Scalar bias beta.
+ */
+void check_cublas_result(
+    int const M, int const N, int const K,
+    float const *hA, float const *hB, float const *hC, float const *old_dC,
     float const alpha, float const beta);

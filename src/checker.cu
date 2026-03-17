@@ -1,4 +1,5 @@
 #include "checker.h"
+#include "launcher.h"
 
 void check_data(
     const float *hA, const float *hB, const float *hC, // host.
@@ -88,7 +89,6 @@ finalize:
 void check_cutlass_result(
     int const M, int const N, int const K,
     float const *hA, float const *hB, float const *hC, float const *old_dC,
-    float const *reference,
     float const alpha, float const beta) {
     /// device data malloc.
     float *dA;
@@ -131,14 +131,62 @@ void check_cutlass_result(
         }
     }
 
-    /// Check parity with CPU result.
+finalize:
+    // Free host data.
+    std::free(cutlass_hC);
+    std::free(kernel_hC);
+
+    // Free device data.
+    CUDA_CHECK(cudaFree(dA));
+    CUDA_CHECK(cudaFree(dB));
+    CUDA_CHECK(cudaFree(dC));
+
+    if (pass == true) {
+        printf("Congratulations, passed!\n");
+    } else {
+        printf("Failed to pass!\n");
+    }
+}
+
+void check_cublas_result(
+    int const M, int const N, int const K,
+    float const *hA, float const *hB, float const *hC, float const *old_dC,
+    float const alpha, float const beta) {
+    /// device data malloc.
+    float *dA;
+    float *dB;
+    float *dC;
+
+    /// Here is the GPU take in. cudaMalloc dA, dB, dC in `prepare_matrix`.
+    CUDA_CHECK(cudaMalloc(&dA, sizeof(float) * M * K));
+    CUDA_CHECK(cudaMalloc(&dB, sizeof(float) * K * N));
+    CUDA_CHECK(cudaMalloc(&dC, sizeof(float) * M * N));
+
+    /// copy datas.
+    /// Now copy the data from host to GPU.
+    CUDA_CHECK(cudaMemcpy(dA, hA, sizeof(float) * M * K, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(dB, hB, sizeof(float) * K * N, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(dC, hC, sizeof(float) * M * N, cudaMemcpyHostToDevice));
+
+    /// Real cutlass calculation.
+    CUBLAS_CHECK(CublasLauncher(M, N, K, alpha, dA, dB, beta, dC));
+
+    // host_data malloc.
+    float *cublas_hC = static_cast<float *>(std::malloc(sizeof(float) * M * N));
+    float *kernel_hC = static_cast<float *>(std::malloc(sizeof(float) * M * N));
+
+    cudaMemcpy(cublas_hC, dC, sizeof(float) * M * N, cudaMemcpyDeviceToHost);
+    cudaMemcpy(kernel_hC, old_dC, sizeof(float) * M * N, cudaMemcpyDeviceToHost);
+
+    /// Check parity with GPU result.
+    bool pass = true;
     for (int i = 0; i < M; i++) {
         for (int j = 0; j < N; j++) {
-            if (static_cast<float>(std::abs(cutlass_hC[i * N + j] - reference[i * N + j])) > 5e-3) {
+            if (static_cast<float>(std::abs(cublas_hC[i * N + j] - kernel_hC[i * N + j])) > 5e-3) {
                 printf("Result error at (%d, %d):\t\n", i, j);
-                printf("cutlass result: %f\n", cutlass_hC[i * N + j]);
-                printf("kernel: %f\n", reference[i * N + j]);
-                printf("Miss: %lf\n", static_cast<float>(std::abs(cutlass_hC[i * N + j] - reference[i * N + j])));
+                printf("cublas result: %f\n", cublas_hC[i * N + j]);
+                printf("kernel: %f\n", kernel_hC[i * N + j]);
+                printf("Miss: %lf\n", static_cast<float>(std::abs(cublas_hC[i * N + j] - kernel_hC[i * N + j])));
                 pass = false;
                 goto finalize;
             }
@@ -147,7 +195,7 @@ void check_cutlass_result(
 
 finalize:
     // Free host data.
-    std::free(cutlass_hC);
+    std::free(cublas_hC);
     std::free(kernel_hC);
 
     // Free device data.
