@@ -52,7 +52,13 @@ void prepare_matrix(
     }
     alpha = uniform_dist(e);
     beta = uniform_dist(e);
+}
 
+void memHtoD(
+    int M, int N, int K,             // Dimensions;
+    float *hA, float *hB, float *hC, // Host data;
+    float *dA, float *dB, float *dC  // Device Data;
+) {
     /// Now copy the data from host to GPU.
     CUDA_CHECK(cudaMemcpy(dA, hA, sizeof(float) * M * K, cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(dB, hB, sizeof(float) * K * N, cudaMemcpyHostToDevice));

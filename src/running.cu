@@ -9,10 +9,7 @@ void run_kernel1(
     float *dA, float *dB, float *dC,
     float &alpha, float &beta,
     bool const check_result_flag) {
-    prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
-    if (check_result_flag) {
-        check_data(hA, hB, hC, dA, dB, dC);
-    }
+    memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
 
     /// Create blocks and grids to map the datas for calculation.
     dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32), 1);
@@ -41,10 +38,7 @@ void run_kernel2(
     float *dA, float *dB, float *dC,
     float &alpha, float &beta,
     bool const check_result_flag) {
-    prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
-    if (check_result_flag) {
-        check_data(hA, hB, hC, dA, dB, dC);
-    }
+    memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
 
     /// Create blocks and grids to map the datas for calculation.
     dim3 gridDim(CEIL_DIV(N, 32), CEIL_DIV(M, 32), 1);
@@ -74,10 +68,7 @@ void run_kernel3(
     float *dA, float *dB, float *dC,
     float &alpha, float &beta,
     bool const check_result_flag) {
-    prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
-    if (check_result_flag) {
-        check_data(hA, hB, hC, dA, dB, dC);
-    }
+    memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
 
     /// Create blocks and grids to map the datas for calculation.
     dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32), 1);
@@ -107,10 +98,7 @@ void run_kernel4(
     float *dA, float *dB, float *dC,
     float &alpha, float &beta,
     bool const check_result_flag) {
-    prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
-    if (check_result_flag) {
-        check_data(hA, hB, hC, dA, dB, dC);
-    }
+    memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
 
     /// Create blocks and grids to map the datas for calculation.
     dim3 gridDim(CEIL_DIV(N, 32), CEIL_DIV(M, 32), 1);
@@ -141,10 +129,7 @@ void run_kernel5(
     float *dA, float *dB, float *dC,
     float &alpha, float &beta,
     bool const check_result_flag) {
-    prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
-    if (check_result_flag) {
-        check_data(hA, hB, hC, dA, dB, dC);
-    }
+    memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
 
     /// Create blocks and grids to map the datas for calculation.
     dim3 gridDim(CEIL_DIV(N, 32), CEIL_DIV(M, 32), 1);
@@ -175,11 +160,6 @@ void run_cutlass(
     float *dA, float *dB, float *dC,
     float &alpha, float &beta,
     bool const check_result_flag) {
-    prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
-    if (check_result_flag) {
-        check_data(hA, hB, hC, dA, dB, dC);
-    }
-
     /// launch the kernel from launcher.
     GpuTimer time{};
     time.start();
@@ -205,11 +185,6 @@ void run_cublas(
     float *dA, float *dB, float *dC,
     float &alpha, float &beta,
     bool const check_result_flag) {
-    prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
-    if (check_result_flag) {
-        check_data(hA, hB, hC, dA, dB, dC);
-    }
-
     /// launch the kernel from launcher.
     GpuTimer time{};
     time.start();

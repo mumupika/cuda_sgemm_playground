@@ -17,13 +17,13 @@
 #include "helper.h"
 #include "tools.h"
 #include "running.h"
+#include "checker.h"
 
 int main(int argc, char *argv[]) {
     /// print usage.
     printf("Usage: ./gemm -M [M size] -N [N size] -K [K size] <--no-check> <--no-cpu>\n");
     printf("\t\t-M, -N, -K: For the size of A(M, K), B(K, N), C(M, N). default 64.\n");
     printf("\t\t--no-check: Whether to check data's parity with CPU result(may be very slow.)\n");
-    printf("\t\t--no-cpu: When you found cpu is too slow, add this option. This will also disable check.\n\n");
 
     /// Matrix Dimension.
     /// Which means: A (M, K) @ B (K, N) * alpha + beta * C (M, N);
@@ -86,6 +86,8 @@ int main(int argc, char *argv[]) {
     /// Bias.
     float alpha;
     float beta;
+
+    prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
 
     /// execute naive sgemm.
     run_kernel1(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
