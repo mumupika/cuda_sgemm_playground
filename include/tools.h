@@ -30,7 +30,7 @@ void prepare_matrix(
 
 /**
  * @brief Memory copy from host to device.
- * 
+ *
  * @param M The number of rows of matrix A and C.
  * @param N The number of columns of matrix B and C.
  * @param K The number of columns of A and rows of B.

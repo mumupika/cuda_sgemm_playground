@@ -42,7 +42,7 @@ void launch_sgemm_naive(
  * @param sharedMemSize The amount of shared memory per block.
  * @param stream The CUDA stream for the kernel launch.
  */
- void launch_sgemm_coalescing(
+void launch_sgemm_coalescing(
     int M, int N, int K,
     const float *A, const float *B, float *C,
     float alpha, float beta,
