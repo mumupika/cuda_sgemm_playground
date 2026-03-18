@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
     float alpha;
     float beta;
 
-    prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
+    prepare_matrix(M, N, K, hA, hB, hC, alpha, beta);
 
     /// execute naive sgemm.
     run_kernel<1>(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);

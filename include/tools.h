@@ -15,16 +15,12 @@ void GetProperties();
  * @param hA Pointer to matrix A on the host.
  * @param hB Pointer to matrix B on the host.
  * @param hC Pointer to matrix C on the host.
- * @param dA Pointer to matrix A on the device.
- * @param dB Pointer to matrix B on the device.
- * @param dC Pointer to matrix C on the device.
  * @param alpha Scalar alpha.
  * @param beta Scalar beta.
  */
 void prepare_matrix(
     int M, int N, int K,             // Dimensions;
     float *hA, float *hB, float *hC, // Host data;
-    float *dA, float *dB, float *dC, // Device Data;
     float &alpha, float &beta        // bias.
 );
 
