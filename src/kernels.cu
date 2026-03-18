@@ -51,7 +51,7 @@ void launch_sgemm_naive(
  * @brief The Gemm implementation with global memory coalescing.
  * @brief sgemm for Matrix A(M, K), B(K, N), C(M, N) has alpha * A @ B + beta * C for calculation.
  */
- __global__ void sgemm_coalescing(
+__global__ void sgemm_coalescing(
     int const M, int const N, int const K,
     float const alpha,
     float const *A, float const *B,

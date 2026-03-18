@@ -41,18 +41,24 @@ void prepare_matrix(
     std::random_device r;
     std::mt19937_64 e(r());
     std::uniform_real_distribution<float> uniform_dist(-2.0, 2.0);
-    for (size_t i = 0; i < M * K; i++) {
+    for (int i = 0; i < M * K; i++) {
         hA[i] = uniform_dist(e);
     }
-    for (size_t i = 0; i < K * N; i++) {
+    for (int i = 0; i < K * N; i++) {
         hB[i] = uniform_dist(e);
     }
-    for (size_t i = 0; i < M * N; i++) {
+    for (int i = 0; i < M * N; i++) {
         hC[i] = uniform_dist(e);
     }
     alpha = uniform_dist(e);
     beta = uniform_dist(e);
+}
 
+void memHtoD(
+    int M, int N, int K,             // Dimensions;
+    float *hA, float *hB, float *hC, // Host data;
+    float *dA, float *dB, float *dC  // Device Data;
+) {
     /// Now copy the data from host to GPU.
     CUDA_CHECK(cudaMemcpy(dA, hA, sizeof(float) * M * K, cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(dB, hB, sizeof(float) * K * N, cudaMemcpyHostToDevice));

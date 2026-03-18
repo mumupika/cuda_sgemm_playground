@@ -3,16 +3,14 @@
 #include "running.h"
 #include "tools.h"
 
-void run_kernel1(
+template <>
+GpuTimer run_kernel<1>(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
     float &alpha, float &beta,
     bool const check_result_flag) {
-    prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
-    if (check_result_flag) {
-        check_data(hA, hB, hC, dA, dB, dC);
-    }
+    memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
 
     /// Create blocks and grids to map the datas for calculation.
     dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32), 1);
@@ -33,18 +31,17 @@ void run_kernel1(
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
+    return time;
 }
 
-void run_kernel2(
+template <>
+GpuTimer run_kernel<2>(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
     float &alpha, float &beta,
     bool const check_result_flag) {
-    prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
-    if (check_result_flag) {
-        check_data(hA, hB, hC, dA, dB, dC);
-    }
+    memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
 
     /// Create blocks and grids to map the datas for calculation.
     dim3 gridDim(CEIL_DIV(N, 32), CEIL_DIV(M, 32), 1);
@@ -66,18 +63,17 @@ void run_kernel2(
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
+    return time;
 }
 
-void run_kernel3(
+template <>
+GpuTimer run_kernel<3>(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
     float &alpha, float &beta,
     bool const check_result_flag) {
-    prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
-    if (check_result_flag) {
-        check_data(hA, hB, hC, dA, dB, dC);
-    }
+    memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
 
     /// Create blocks and grids to map the datas for calculation.
     dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32), 1);
@@ -99,18 +95,17 @@ void run_kernel3(
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
+    return time;
 }
 
-void run_kernel4(
+template <>
+GpuTimer run_kernel<4>(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
     float &alpha, float &beta,
     bool const check_result_flag) {
-    prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
-    if (check_result_flag) {
-        check_data(hA, hB, hC, dA, dB, dC);
-    }
+    memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
 
     /// Create blocks and grids to map the datas for calculation.
     dim3 gridDim(CEIL_DIV(N, 32), CEIL_DIV(M, 32), 1);
@@ -133,18 +128,17 @@ void run_kernel4(
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
+    return time;
 }
 
-void run_kernel5(
+template <>
+GpuTimer run_kernel<5>(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
     float &alpha, float &beta,
     bool const check_result_flag) {
-    prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
-    if (check_result_flag) {
-        check_data(hA, hB, hC, dA, dB, dC);
-    }
+    memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
 
     /// Create blocks and grids to map the datas for calculation.
     dim3 gridDim(CEIL_DIV(N, 32), CEIL_DIV(M, 32), 1);
@@ -167,19 +161,16 @@ void run_kernel5(
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
+    return time;
 }
 
-void run_cutlass(
+GpuTimer run_cutlass(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
     float &alpha, float &beta,
     bool const check_result_flag) {
-    prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
-    if (check_result_flag) {
-        check_data(hA, hB, hC, dA, dB, dC);
-    }
-
+    memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
     /// launch the kernel from launcher.
     GpuTimer time{};
     time.start();
@@ -197,19 +188,16 @@ void run_cutlass(
         printf("==========================================================\n");
         std::free(reference);
     }
+    return time;
 }
 
-void run_cublas(
+GpuTimer run_cublas(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
     float &alpha, float &beta,
     bool const check_result_flag) {
-    prepare_matrix(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta);
-    if (check_result_flag) {
-        check_data(hA, hB, hC, dA, dB, dC);
-    }
-
+    memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
     /// launch the kernel from launcher.
     GpuTimer time{};
     time.start();
@@ -228,4 +216,5 @@ void run_cublas(
         printf("==========================================================\n");
         std::free(reference);
     }
+    return time;
 }

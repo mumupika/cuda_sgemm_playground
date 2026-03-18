@@ -21,6 +21,9 @@ set(CMAKE_CUDA_USE_RESPONSE_FILE_FOR_INCLUDES 0)
 set(CMAKE_CUDA_USE_RESPONSE_FILE_FOR_LIBRARIES 0)
 set(CMAKE_CUDA_USE_RESPONSE_FILE_FOR_OBJECTS 0)
 
+# warn all.
+add_compile_options(-Wall)
+
 # FetchContent for the ceiling line of the GEMM.
 include(FetchContent)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third-party/cutlass)
