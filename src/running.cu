@@ -47,7 +47,7 @@ void run_kernel2(
     }
 
     /// Create blocks and grids to map the datas for calculation.
-    dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32), 1);
+    dim3 gridDim(CEIL_DIV(N, 32), CEIL_DIV(M, 32), 1);
     int const blockSize = 32;
     dim3 blockDim(blockSize, blockSize);
 
@@ -113,7 +113,7 @@ void run_kernel4(
     }
 
     /// Create blocks and grids to map the datas for calculation.
-    dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32), 1);
+    dim3 gridDim(CEIL_DIV(N, 32), CEIL_DIV(M, 32), 1);
     int const tileSize = 32;
     dim3 blockDim(tileSize, tileSize);
 
@@ -147,7 +147,7 @@ void run_kernel5(
     }
 
     /// Create blocks and grids to map the datas for calculation.
-    dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32), 1);
+    dim3 gridDim(CEIL_DIV(N, 32), CEIL_DIV(M, 32), 1);
     int const tileSize = 32;
     dim3 blockDim(tileSize, tileSize);
 
