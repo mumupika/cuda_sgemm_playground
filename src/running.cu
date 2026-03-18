@@ -4,7 +4,7 @@
 #include "tools.h"
 
 template <>
-void run_kernel<1>(
+GpuTimer run_kernel<1>(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
@@ -31,10 +31,11 @@ void run_kernel<1>(
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
+    return time;
 }
 
 template <>
-void run_kernel<2>(
+GpuTimer run_kernel<2>(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
@@ -62,10 +63,11 @@ void run_kernel<2>(
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
+    return time;
 }
 
 template <>
-void run_kernel<3>(
+GpuTimer run_kernel<3>(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
@@ -93,10 +95,11 @@ void run_kernel<3>(
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
+    return time;
 }
 
 template <>
-void run_kernel<4>(
+GpuTimer run_kernel<4>(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
@@ -125,10 +128,11 @@ void run_kernel<4>(
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
+    return time;
 }
 
 template <>
-void run_kernel<5>(
+GpuTimer run_kernel<5>(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
@@ -157,9 +161,10 @@ void run_kernel<5>(
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
+    return time;
 }
 
-void run_cutlass(
+GpuTimer run_cutlass(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
@@ -183,9 +188,10 @@ void run_cutlass(
         printf("==========================================================\n");
         std::free(reference);
     }
+    return time;
 }
 
-void run_cublas(
+GpuTimer run_cublas(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
@@ -210,4 +216,5 @@ void run_cublas(
         printf("==========================================================\n");
         std::free(reference);
     }
+    return time;
 }

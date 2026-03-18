@@ -41,13 +41,13 @@ void prepare_matrix(
     std::random_device r;
     std::mt19937_64 e(r());
     std::uniform_real_distribution<float> uniform_dist(-2.0, 2.0);
-    for (size_t i = 0; i < M * K; i++) {
+    for (int i = 0; i < M * K; i++) {
         hA[i] = uniform_dist(e);
     }
-    for (size_t i = 0; i < K * N; i++) {
+    for (int i = 0; i < K * N; i++) {
         hB[i] = uniform_dist(e);
     }
-    for (size_t i = 0; i < M * N; i++) {
+    for (int i = 0; i < M * N; i++) {
         hC[i] = uniform_dist(e);
     }
     alpha = uniform_dist(e);
