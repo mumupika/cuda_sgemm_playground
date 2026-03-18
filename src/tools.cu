@@ -34,7 +34,6 @@ void GetProperties() {
 void prepare_matrix(
     int M, int N, int K,             // Dimensions;
     float *hA, float *hB, float *hC, // Host data;
-    float *dA, float *dB, float *dC, // Device Data;
     float &alpha, float &beta        // bias.
 ) {
     /// Prepare the data. generate uniformed float.
