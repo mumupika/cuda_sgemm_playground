@@ -66,18 +66,16 @@ void check_cpu_result(
     bool pass = true;
     for (int i = 0; i < M; i++) {
         for (int j = 0; j < N; j++) {
-            if (static_cast<float>(std::abs(reference[i * N + j] - result[i * N + j]) / std::abs(reference[i * N + j] + 1e-10)) > 5e-3) {
+            if (static_cast<float>(std::abs(reference[i * N + j] - result[i * N + j])) > 5e-3) {
                 printf("Result error at (%d, %d):\t\n", i, j);
                 printf("Expected result: %f\n", reference[i * N + j]);
                 printf("Got: %f\n", result[i * N + j]);
-                printf("Miss: %lf\n", static_cast<float>(std::abs(reference[i * N + j] - result[i * N + j]) / std::abs(reference[i * N + j] + 1e-10)));
+                printf("Miss: %lf\n", static_cast<float>(std::abs(reference[i * N + j] - result[i * N + j])));
                 pass = false;
-                goto finalize;
             }
         }
     }
 
-finalize:
     std::free(result);
     if (pass == true) {
         printf("Congratulations, passed!\n");
@@ -126,12 +124,10 @@ void check_cutlass_result(
                 printf("kernel: %f\n", kernel_hC[i * N + j]);
                 printf("Miss: %lf\n", static_cast<float>(std::abs(cutlass_hC[i * N + j] - kernel_hC[i * N + j])));
                 pass = false;
-                goto finalize;
             }
         }
     }
 
-finalize:
     // Free host data.
     std::free(cutlass_hC);
     std::free(kernel_hC);

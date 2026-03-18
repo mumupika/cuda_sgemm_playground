@@ -165,6 +165,7 @@ void run_cutlass(
     float *dA, float *dB, float *dC,
     float &alpha, float &beta,
     bool const check_result_flag) {
+    memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
     /// launch the kernel from launcher.
     GpuTimer time{};
     time.start();
@@ -190,6 +191,7 @@ void run_cublas(
     float *dA, float *dB, float *dC,
     float &alpha, float &beta,
     bool const check_result_flag) {
+    memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
     /// launch the kernel from launcher.
     GpuTimer time{};
     time.start();

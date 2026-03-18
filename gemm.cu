@@ -27,8 +27,8 @@ int main(int argc, char *argv[]) {
 
     /// Matrix Dimension.
     /// Which means: A (M, K) @ B (K, N) * alpha + beta * C (M, N);
-    int M = 64;
-    int N = 64;
+    int M = 128;
+    int N = 32;
     int K = 64;
     bool check_result_flag = true;
 
@@ -95,8 +95,8 @@ int main(int argc, char *argv[]) {
     run_kernel<3>(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
     run_kernel<4>(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
     run_kernel<5>(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
-    // run_cutlass(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
-    // run_cublas(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
+    run_cutlass(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
+    run_cublas(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
 
     /// free hA, hB, hC.
     std::free(hA);
