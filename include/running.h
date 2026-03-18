@@ -23,7 +23,9 @@ void run_kernel(int const M, int const N, int const K,
 #define KERNEL_GEN \
     KERNEL(1)      \
     KERNEL(2)      \
-    KERNEL(3) KERNEL(4) KERNEL(5)
+    KERNEL(3)      \
+    KERNEL(4)      \
+    KERNEL(5)
 
 KERNEL_GEN
 
