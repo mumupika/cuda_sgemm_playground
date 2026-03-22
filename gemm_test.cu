@@ -19,7 +19,7 @@
 #include "running.h"
 #include <string>
 
-template<size_t i>
+template <size_t i>
 std::string get_kernel_name() {
     if constexpr (i == 0) {
         return "cublas";
@@ -43,12 +43,11 @@ auto getKernel() {
 
 template <int KernelId>
 void testKernel(
-    int M, int N, int K, 
-    float *hA, float *hB, float *hC, 
-    float const alpha, float const beta, 
+    int M, int N, int K,
+    float *hA, float *hB, float *hC,
+    float const alpha, float const beta,
     char const *name,
-    bool check_result_flag
-) {
+    bool check_result_flag) {
     /// device data.
     float *dA;
     float *dB;
@@ -73,12 +72,11 @@ void testKernel(
 
 template <size_t... Is>
 void call_test(
-    int M, int N, int K, 
-    float *hA, float *hB, float *hC, 
-    float const alpha, float const beta, 
+    int M, int N, int K,
+    float *hA, float *hB, float *hC,
+    float const alpha, float const beta,
     bool check_result_flag,
-    std::index_sequence<Is...>
-) {
+    std::index_sequence<Is...>) {
     (testKernel<Is>(M, N, K, hA, hB, hC, alpha, beta, get_kernel_name<Is>().c_str(), check_result_flag), ...);
 }
 
