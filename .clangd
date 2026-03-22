@@ -48,4 +48,4 @@ CompileFlags:
     Add:
         - "-ferror-limit=0"
         - "-I/usr/local/cuda/include/cccl"
-        - "-U__clang__"
+        # - "-U__clang__"

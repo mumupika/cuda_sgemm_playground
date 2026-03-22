@@ -4,22 +4,22 @@
 #define KERNEL_NUMS 5
 
 template <int KernelId>
-GpuTimer run_kernel(int const M, int const N, int const K,
-                    float *hA, float *hB, float *hC,
-                    float *dA, float *dB, float *dC,
-                    float &alpha, float &beta,
-                    bool const check_result_flag) {
-    static_assert(KernelId >= 1 && KernelId <= KERNEL_NUMS, "Invalid kernel ID");
-    return GpuTimer();
+std::enable_if_t<((KernelId >= 0) && (KernelId < KERNEL_NUMS + 1)), float>
+run_kernel(int const M, int const N, int const K,
+           float *hA, float *hB, float *hC,
+           float *dA, float *dB, float *dC,
+           float const alpha, float const beta,
+           bool const check_result_flag) {
+    return float();
 }
 
 #define KERNEL(id)                             \
     template <>                                \
-    GpuTimer run_kernel<id>(                   \
+    float run_kernel<id>(                   \
         int const M, int const N, int const K, \
         float *hA, float *hB, float *hC,       \
         float *dA, float *dB, float *dC,       \
-        float &alpha, float &beta,             \
+        float const alpha, float const beta,   \
         bool const check_result_flag);
 
 #define KERNEL_GEN \
@@ -33,18 +33,17 @@ KERNEL_GEN
 
 #undef KERNEL_GEN
 #undef KERNEL
-#undef KERNEL_NUMS
 
-GpuTimer run_cutlass(
+float run_cutlass(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
-    float &alpha, float &beta,
+    float const alpha, float const beta,
     bool const check_result_flag);
 
-GpuTimer run_cublas(
+float run_cublas(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
-    float &alpha, float &beta,
+    float const alpha, float const beta,
     bool const check_result_flag);

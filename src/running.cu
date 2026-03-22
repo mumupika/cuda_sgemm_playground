@@ -4,11 +4,11 @@
 #include "tools.h"
 
 template <>
-GpuTimer run_kernel<1>(
+float run_kernel<1>(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
-    float &alpha, float &beta,
+    float const alpha, float const beta,
     bool const check_result_flag) {
     memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
 
@@ -31,15 +31,15 @@ GpuTimer run_kernel<1>(
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
-    return time;
+    return time.elapsed_millis();
 }
 
 template <>
-GpuTimer run_kernel<2>(
+float run_kernel<2>(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
-    float &alpha, float &beta,
+    float const alpha, float const beta,
     bool const check_result_flag) {
     memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
 
@@ -63,15 +63,15 @@ GpuTimer run_kernel<2>(
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
-    return time;
+    return time.elapsed_millis();
 }
 
 template <>
-GpuTimer run_kernel<3>(
+float run_kernel<3>(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
-    float &alpha, float &beta,
+    float const alpha, float const beta,
     bool const check_result_flag) {
     memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
 
@@ -95,15 +95,15 @@ GpuTimer run_kernel<3>(
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
-    return time;
+    return time.elapsed_millis();
 }
 
 template <>
-GpuTimer run_kernel<4>(
+float run_kernel<4>(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
-    float &alpha, float &beta,
+    float const alpha, float const beta,
     bool const check_result_flag) {
     memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
 
@@ -128,15 +128,15 @@ GpuTimer run_kernel<4>(
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
-    return time;
+    return time.elapsed_millis();
 }
 
 template <>
-GpuTimer run_kernel<5>(
+float run_kernel<5>(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
-    float &alpha, float &beta,
+    float const alpha, float const beta,
     bool const check_result_flag) {
     memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
 
@@ -161,14 +161,14 @@ GpuTimer run_kernel<5>(
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
-    return time;
+    return time.elapsed_millis();
 }
 
-GpuTimer run_cutlass(
+float run_cutlass(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
-    float &alpha, float &beta,
+    float const alpha, float const beta,
     bool const check_result_flag) {
     memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
     /// launch the kernel from launcher.
@@ -188,14 +188,14 @@ GpuTimer run_cutlass(
         printf("==========================================================\n");
         std::free(reference);
     }
-    return time;
+    return time.elapsed_millis();
 }
 
-GpuTimer run_cublas(
+float run_cublas(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
-    float &alpha, float &beta,
+    float const alpha, float const beta,
     bool const check_result_flag) {
     memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
     /// launch the kernel from launcher.
@@ -216,5 +216,5 @@ GpuTimer run_cublas(
         printf("==========================================================\n");
         std::free(reference);
     }
-    return time;
+    return time.elapsed_millis();
 }

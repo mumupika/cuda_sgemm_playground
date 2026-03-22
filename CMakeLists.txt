@@ -9,6 +9,10 @@ set(CMAKE_CXX_COMPILER "/home/linuxbrew/.linuxbrew/opt/llvm@21/bin/clang++")
 
 project(gemm LANGUAGES C CXX CUDA)
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
 find_package(Git REQUIRED)
 find_package(CUDAToolkit REQUIRED)
 
@@ -53,27 +57,37 @@ set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 set(CMAKE_CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 
 # get the executable file.
-add_executable(gemm 
-    gemm.cu
+add_library(
+    components SHARED
     src/running.cu
     src/kernels.cu 
     src/cutlass.cu
     src/tools.cu
     src/checker.cu
 )
+add_executable(gemm_test gemm_test.cu)
+add_executable(gemm_bench gemm_bench.cu)
 
-target_link_libraries(gemm 
+target_link_libraries(
+    components
+    CUTLASS
+    cutlass_tools_util_includes
+    CUDA::cudart
+    CUDA::cuda_driver
+    CUDA::cublas
+)
+
+target_link_libraries(gemm_test
     PRIVATE 
-        CUTLASS
-        cutlass_tools_util_includes
-        cublas
-        CUDA::cudart
-        CUDA::cuda_driver
-        CUDA::cublas
+        components
+)
+target_link_libraries(gemm_bench
+    PRIVATE 
+        components
 )
 
 # Get the target compile options.
-target_compile_options(gemm PRIVATE
+target_compile_options(components PRIVATE
     $<$<COMPILE_LANGUAGE:CUDA>:
         --expt-relaxed-constexpr
         --expt-extended-lambda
