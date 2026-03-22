@@ -72,7 +72,6 @@ target_link_libraries(
     components
     CUTLASS
     cutlass_tools_util_includes
-    cublas
     CUDA::cudart
     CUDA::cuda_driver
     CUDA::cublas

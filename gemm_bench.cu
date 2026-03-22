@@ -15,113 +15,44 @@
 #include "helper.h"
 #include "tools.h"
 #include "running.h"
-#include <utility>
+#include <string>
 
-enum KernelType {
-    CUTLASS = 0,
-    CUBLAS
-};
-
-template <int KernelId>
-std::enable_if_t<(KernelId == KernelType::CUTLASS), void>
-benchKernel(
-    int M, int N, int K, 
-    float *hA, float *hB, float *hC, 
-    float const alpha, float const beta, 
-    bool check_result_flag
-) {
-    /// device data.
-    float *dA;
-    float *dB;
-    float *dC;
-
-    /// Here is the GPU take in. cudaMalloc dA, dB, dC in `prepare_matrix`.
-    CUDA_CHECK(cudaMalloc(&dA, sizeof(float) * M * K));
-    CUDA_CHECK(cudaMalloc(&dB, sizeof(float) * K * N));
-    CUDA_CHECK(cudaMalloc(&dC, sizeof(float) * M * N));
-
-    printf("================================================================\n");
-    printf("This is the first warm up.\n");
-    printf("================================================================\n");
-    run_cutlass(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
-    printf("================================================================\n");
-    cudaDeviceSynchronize();
-
-    /// Now started real bench.
-    float time;
-    double elapsed_milis = 0.0;
-    for (int i = 0; i < 10; i++) {
-        time = run_cutlass(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
-        elapsed_milis += time;
-        cudaDeviceSynchronize();
+template<size_t i>
+std::string get_kernel_name() {
+    if constexpr (i == 0) {
+        return "cutlass";
+    } else if constexpr (i == 1) {
+        return "cublas";
+    } else {
+        return "kernel " + std::to_string(i - 1);
     }
-    elapsed_milis /= 10;
-    long long total_flop_cnt = 2LL * M * N * K;
-    double calc = total_flop_cnt / elapsed_milis * (int)(1e3) / (int)(1e9);
-    printf("cutlass Kernel average elapsed time: %f ms, Calculate capability: %lf GFlops/s.\n", elapsed_milis, calc);
-
-    /// Cudafree hA, hB, hC.
-    CUDA_CHECK(cudaFree(dA));
-    CUDA_CHECK(cudaFree(dB));
-    CUDA_CHECK(cudaFree(dC));
 }
 
 template <int KernelId>
-std::enable_if_t<(KernelId == KernelType::CUBLAS), void>
-benchKernel(
-    int M, int N, int K, 
-    float *hA, float *hB, float *hC, 
-    float const alpha, float const beta, 
-    bool check_result_flag
-) {
-    /// device data.
-    float *dA;
-    float *dB;
-    float *dC;
-
-    /// Here is the GPU take in. cudaMalloc dA, dB, dC in `prepare_matrix`.
-    CUDA_CHECK(cudaMalloc(&dA, sizeof(float) * M * K));
-    CUDA_CHECK(cudaMalloc(&dB, sizeof(float) * K * N));
-    CUDA_CHECK(cudaMalloc(&dC, sizeof(float) * M * N));
-
-    printf("================================================================\n");
-    printf("This is the first warm up.\n");
-    printf("================================================================\n");
-    run_cublas(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
-    printf("================================================================\n");
-    cudaDeviceSynchronize();
-
-    /// Now started real bench.
-    float time;
-    double elapsed_milis = 0.0;
-    for (int i = 0; i < 10; i++) {
-        time = run_cublas(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
-        elapsed_milis += time;
-        cudaDeviceSynchronize();
+auto getKernel() {
+    if constexpr (KernelId == 0) {
+        return run_cublas;
+    } else if constexpr (KernelId == 1) {
+        return run_cutlass;
+    } else if constexpr (KernelId >= 2 && KernelId < KERNEL_NUMS + 2) {
+        return run_kernel<KernelId - 1>;
     }
-    elapsed_milis /= 10;
-    long long total_flop_cnt = 2LL * M * N * K;
-    double calc = total_flop_cnt / elapsed_milis * (int)(1e3) / (int)(1e9);
-    printf("cublas Kernel average elapsed time: %f ms, Calculate capability: %lf GFlops/s.\n", elapsed_milis, calc);
-
-    /// Cudafree hA, hB, hC.
-    CUDA_CHECK(cudaFree(dA));
-    CUDA_CHECK(cudaFree(dB));
-    CUDA_CHECK(cudaFree(dC));
 }
 
 template <int KernelId>
-std::enable_if_t<(KernelId >= 2) && (KernelId < 7), void>
-benchKernel(
+void benchKernel(
     int M, int N, int K, 
     float *hA, float *hB, float *hC, 
     float const alpha, float const beta, 
+    char const *name,
     bool check_result_flag
 ) {
     /// device data.
     float *dA;
     float *dB;
     float *dC;
+
+    auto kernel = getKernel<KernelId>();
 
     /// Here is the GPU take in. cudaMalloc dA, dB, dC in `prepare_matrix`.
     CUDA_CHECK(cudaMalloc(&dA, sizeof(float) * M * K));
@@ -131,7 +62,7 @@ benchKernel(
     printf("================================================================\n");
     printf("This is the first warm up.\n");
     printf("================================================================\n");
-    run_kernel<KernelId - 1>(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
+    kernel(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
     printf("================================================================\n");
     cudaDeviceSynchronize();
 
@@ -139,14 +70,14 @@ benchKernel(
     float time;
     double elapsed_milis = 0.0;
     for (int i = 0; i < 10; i++) {
-        time = run_kernel<KernelId - 1>(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
+        time = kernel(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
         elapsed_milis += time;
         cudaDeviceSynchronize();
     }
     elapsed_milis /= 10;
     long long total_flop_cnt = 2LL * M * N * K;
     double calc = total_flop_cnt / elapsed_milis * (int)(1e3) / (int)(1e9);
-    printf("Kernel %d average elapsed time: %f ms, Calculate capability: %lf GFlops/s.\n", KernelId - 1, elapsed_milis, calc);
+    printf("%s average elapsed time: %f ms, Calculate capability: %lf GFlops/s.\n", name, elapsed_milis, calc);
 
     /// Cudafree hA, hB, hC.
     CUDA_CHECK(cudaFree(dA));
@@ -162,7 +93,7 @@ void call_bench(
     bool check_result_flag,
     std::index_sequence<Is...>
 ) {
-    (benchKernel<Is>(M, N, K, hA, hB, hC, alpha, beta, check_result_flag), ...);
+    (benchKernel<Is>(M, N, K, hA, hB, hC, alpha, beta, get_kernel_name<Is>().c_str(), check_result_flag), ...);
 }
 
 int main() {
