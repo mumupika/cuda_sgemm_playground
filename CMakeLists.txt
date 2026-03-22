@@ -1,12 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
 
-# set clang21 for our project
-set(CMAKE_PREFIX_PATH "/home/linuxbrew/.linuxbrew/opt/llvm@21")
-set(CMAKE_EXE_LINKER_FLAGS "-L/home/linuxbrew/.linuxbrew/opt/llvm@21/lib")
-set(CMAKE_CXX_FLAGS "-I/home/linuxbrew/.linuxbrew/opt/llvm@21/include")
-set(CMAKE_C_COMPILER "/home/linuxbrew/.linuxbrew/opt/llvm@21/bin/clang")
-set(CMAKE_CXX_COMPILER "/home/linuxbrew/.linuxbrew/opt/llvm@21/bin/clang++")
-
 project(gemm LANGUAGES C CXX CUDA)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
