@@ -2,6 +2,7 @@
 #include "launcher.h"
 #include "running.h"
 #include "tools.h"
+#include "launcher_templates.h"
 
 template <>
 float run_kernel<1>(

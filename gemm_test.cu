@@ -85,9 +85,9 @@ void call_test(
 int main() {
     /// Matrix Dimension.
     /// Which means: A (M, K) @ B (K, N) * alpha + beta * C (M, N);
-    int M = 64;
-    int N = 64;
-    int K = 64;
+    int M = 1023;
+    int N = 825;
+    int K = 971;
     bool check_result_flag = true;
 
     /// Get the device properties.
