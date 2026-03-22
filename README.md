@@ -1,6 +1,6 @@
 # Optimising GEMM
 
-This is a simple project for optimising the gemm with comparison to CUBLAS and CUTLASS.
+This is a simple project for optimising the gemm with comparison to CUBLAS and CUTLASS. (Learning...)
 
 ## References:
 
@@ -29,6 +29,10 @@ max Concurrent kers: 1
 async engine cnt: 2
 =====================================================================
 
-Kernel 1: GPU executed elapsed: 48.733665 ms (Naive implementation)
-Kernel 2: GPU executed elapsed: 19.190975 ms (Global Memory Coalescing)
+M = 4096, N = 4096, K = 4096
+kernel 1 average elapsed time: 203.515846 ms, Calculate capability: 675.323106 GFlops/s.
+kernel 2 average elapsed time: 25.308681 ms, Calculate capability: 5430.506310 GFlops/s.
+kernel 3 average elapsed time: 26.328311 ms, Calculate capability: 5220.196451 GFlops/s.
+kernel 4 average elapsed time: 28.976618 ms, Calculate capability: 4743.098534 GFlops/s.
+kernel 5 average elapsed time: 29.711123 ms, Calculate capability: 4625.841716 GFlops/s.
 ```
