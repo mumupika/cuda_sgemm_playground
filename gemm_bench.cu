@@ -20,9 +20,9 @@
 template<size_t i>
 std::string get_kernel_name() {
     if constexpr (i == 0) {
-        return "cutlass";
-    } else if constexpr (i == 1) {
         return "cublas";
+    } else if constexpr (i == 1) {
+        return "cutlass";
     } else {
         return "kernel " + std::to_string(i - 1);
     }
