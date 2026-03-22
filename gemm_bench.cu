@@ -52,12 +52,12 @@ void benchKernel(
     float *dB;
     float *dC;
 
-    auto kernel = getKernel<KernelId>();
-
     /// Here is the GPU take in. cudaMalloc dA, dB, dC in `prepare_matrix`.
     CUDA_CHECK(cudaMalloc(&dA, sizeof(float) * M * K));
     CUDA_CHECK(cudaMalloc(&dB, sizeof(float) * K * N));
     CUDA_CHECK(cudaMalloc(&dC, sizeof(float) * M * N));
+
+    auto kernel = getKernel<KernelId>();
 
     printf("================================================================\n");
     printf("This is the first warm up.\n");
@@ -116,7 +116,7 @@ int main() {
 
         prepare_matrix(M, N, K, hA, hB, hC, alpha, beta);
 
-        printf("M = %d, K = %d, N = %d Kernel bench test:\n", M, K, N);
+        printf("M = %d, K = %d, N = %d Kernel bench:\n", M, K, N);
 
         call_bench(M, N, K, hA, hB, hC, alpha, beta, check_result_flag, std::make_index_sequence<KERNEL_NUMS + 2>{});
 
