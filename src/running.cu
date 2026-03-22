@@ -14,8 +14,9 @@ float run_kernel<1>(
     memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
 
     /// Create blocks and grids to map the datas for calculation.
-    dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32), 1);
-    dim3 blockDim(32, 32, 1);
+    constexpr int blockSize = 32;
+    dim3 gridDim(CEIL_DIV(M, blockSize), CEIL_DIV(N, blockSize), 1);
+    dim3 blockDim(blockSize, blockSize, 1);
 
     /// launch the kernel from launcher.
     GpuTimer time{};
@@ -45,8 +46,8 @@ float run_kernel<2>(
     memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
 
     /// Create blocks and grids to map the datas for calculation.
-    dim3 gridDim(CEIL_DIV(N, 32), CEIL_DIV(M, 32), 1);
-    int const blockSize = 32;
+    constexpr int blockSize = 32;
+    dim3 gridDim(CEIL_DIV(N, blockSize), CEIL_DIV(M, blockSize), 1);
     dim3 blockDim(blockSize, blockSize);
 
     /// launch the kernel from launcher.
@@ -77,8 +78,8 @@ float run_kernel<3>(
     memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
 
     /// Create blocks and grids to map the datas for calculation.
-    dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32), 1);
-    int const blockSize = 32;
+    constexpr int blockSize = 32;
+    dim3 gridDim(CEIL_DIV(M, blockSize), CEIL_DIV(N, blockSize), 1);
     dim3 blockDim(blockSize * blockSize);
 
     /// launch the kernel from launcher.
@@ -109,8 +110,8 @@ float run_kernel<4>(
     memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
 
     /// Create blocks and grids to map the datas for calculation.
-    dim3 gridDim(CEIL_DIV(N, 32), CEIL_DIV(M, 32), 1);
-    int const tileSize = 32;
+    constexpr int tileSize = 32;
+    dim3 gridDim(CEIL_DIV(N, tileSize), CEIL_DIV(M, tileSize), 1);
     dim3 blockDim(tileSize, tileSize);
 
     /// launch the kernel from launcher.
@@ -142,8 +143,8 @@ float run_kernel<5>(
     memHtoD(M, N, K, hA, hB, hC, dA, dB, dC);
 
     /// Create blocks and grids to map the datas for calculation.
-    dim3 gridDim(CEIL_DIV(N, 32), CEIL_DIV(M, 32), 1);
-    int const tileSize = 32;
+    constexpr int tileSize = 32;
+    dim3 gridDim(CEIL_DIV(N, tileSize), CEIL_DIV(M, tileSize), 1);
     dim3 blockDim(tileSize, tileSize);
 
     /// launch the kernel from launcher.
