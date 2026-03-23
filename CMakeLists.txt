@@ -60,6 +60,8 @@ add_library(
 )
 add_executable(gemm_test gemm_test.cu)
 add_executable(gemm_bench gemm_bench.cu)
+add_executable(gemm_prof gemm_prof.cu)
+
 
 target_link_libraries(
     components
@@ -75,6 +77,10 @@ target_link_libraries(gemm_test
         components
 )
 target_link_libraries(gemm_bench
+    PRIVATE 
+        components
+)
+target_link_libraries(gemm_prof
     PRIVATE 
         components
 )
