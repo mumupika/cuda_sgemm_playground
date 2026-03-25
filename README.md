@@ -16,8 +16,8 @@ Personal usage only.
 
 ```txt
 ============================= Properties =============================
-Device: NVIDIA GeForce RTX 5090
-Total global memory: 33668988928 Bytes
+Device: NVIDIA L40
+Total global memory: 47676129280 Bytes
 Total Constant memory: 65536 Bytes
 Shared mem per Block: 49152 Bytes
 Regs per block: 65536
