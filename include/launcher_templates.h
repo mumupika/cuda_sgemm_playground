@@ -235,9 +235,7 @@ __global__ void sgemm_vec_load(
     float alpha,
     const float *A, const float *B,
     float beta, float *C) {
-    extern __shared__ float smem[]; // One dim shared memory for dynamic allocation.
-    // Padding As with BK + 1. So As has (BM, BK + 1);
-    // Padding Bs with BN + 1. So Bs has (BK, BN + 1);
+    extern __shared__ float smem[];
     float *As = smem;
     float *Bs = &smem[BM * BK];
     // thread in current block.
@@ -258,36 +256,59 @@ __global__ void sgemm_vec_load(
             int share_col = idx % BK;
             int global_row = block_row + share_row;
             int global_col = k_out + share_col;
-            // Vectorise the load.
-            float4 global_A;
-            // carefully manage the border.
-            global_A = *reinterpret_cast<const float4 *>(&A[global_row * K + global_col]);
-            // We have padding. Don't worry about out of bound.
-            As[share_row * BK + share_col + 0] = global_A.x;
-            As[share_row * BK + share_col + 1] = global_A.y;
-            As[share_row * BK + share_col + 2] = global_A.z;
-            As[share_row * BK + share_col + 3] = global_A.w;
+            float vals[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+            if (global_row < M) {
+                if (global_col + 3 < K && ((global_row * K + global_col) & 3) == 0) {
+                    // vectorized load.
+                    float4 global_A = *reinterpret_cast<const float4 *>(&A[global_row * K + global_col]);
+                    vals[0] = global_A.x;
+                    vals[1] = global_A.y;
+                    vals[2] = global_A.z;
+                    vals[3] = global_A.w;
+                } else {
+#pragma unroll
+                    for (int i = 0; i < 4; ++i) {
+                        if (global_col + i < K) {
+                            vals[i] = A[global_row * K + global_col + i];
+                        }
+                    }
+                }
+            }
+            As[share_row * BK + share_col + 0] = vals[0];
+            As[share_row * BK + share_col + 1] = vals[1];
+            As[share_row * BK + share_col + 2] = vals[2];
+            As[share_row * BK + share_col + 3] = vals[3];
         }
+
         for (int idx = tid * 4; idx < BK * BN; idx += num_threads * 4) {
-            // The share memory coords.
             int share_row = idx / BN;
             int share_col = idx % BN;
-            // The global memory coords.
             int global_row = k_out + share_row;
             int global_col = block_col + share_col;
-            // Vectorise the load.
-            float4 global_B;
-            // carefully manage the border.
-            global_B = *reinterpret_cast<const float4 *>(&B[global_row * N + global_col]);
-            // We have padding. Don't worry about out of bound.
-            // Also, we tried to transpose into col major here!
-            Bs[share_row * BN + share_col + 0] = global_B.x;
-            Bs[share_row * BN + share_col + 1] = global_B.y;
-            Bs[share_row * BN + share_col + 2] = global_B.z;
-            Bs[share_row * BN + share_col + 3] = global_B.w;
+            float vals[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+            if (global_row < K) {
+                if (global_col + 3 < N && ((global_row * N + global_col) & 3) == 0) {
+                    // vectorized load.
+                    float4 global_B = *reinterpret_cast<const float4 *>(&B[global_row * N + global_col]);
+                    vals[0] = global_B.x;
+                    vals[1] = global_B.y;
+                    vals[2] = global_B.z;
+                    vals[3] = global_B.w;
+                } else {
+#pragma unroll
+                    for (int i = 0; i < 4; ++i) {
+                        if (global_col + i < N) {
+                            vals[i] = B[global_row * N + global_col + i];
+                        }
+                    }
+                }
+            }
+            Bs[share_row * BN + share_col + 0] = vals[0];
+            Bs[share_row * BN + share_col + 1] = vals[1];
+            Bs[share_row * BN + share_col + 2] = vals[2];
+            Bs[share_row * BN + share_col + 3] = vals[3];
         }
         __syncthreads();
-// Compute now.
 #pragma unroll
         for (int k_in = 0; k_in < BK; k_in++) {
 #pragma unroll
@@ -300,7 +321,6 @@ __global__ void sgemm_vec_load(
         }
         __syncthreads();
     }
-// Store back to C.
 #pragma unroll
     for (int i = 0; i < TM; i++) {
         int row = output_row + i;
@@ -308,13 +328,22 @@ __global__ void sgemm_vec_load(
 #pragma unroll
             for (int j = 0; j < TN; j += 4) {
                 int col = output_col + j;
-                float4 tempC;
-                tempC = *reinterpret_cast<float4 *>(&C[row * N + col]);
-                tempC.x = alpha * sum[i * TN + j] + beta * tempC.x;
-                tempC.y = alpha * sum[i * TN + j + 1] + beta * tempC.y;
-                tempC.z = alpha * sum[i * TN + j + 2] + beta * tempC.z;
-                tempC.w = alpha * sum[i * TN + j + 3] + beta * tempC.w;
-                *reinterpret_cast<float4 *>(&C[row * N + col]) = tempC;
+                if (col + 3 < N && ((row * N + col) & 3) == 0) {
+                    float4 tempC;
+                    tempC = *reinterpret_cast<float4 *>(&C[row * N + col]);
+                    tempC.x = alpha * sum[i * TN + j] + beta * tempC.x;
+                    tempC.y = alpha * sum[i * TN + j + 1] + beta * tempC.y;
+                    tempC.z = alpha * sum[i * TN + j + 2] + beta * tempC.z;
+                    tempC.w = alpha * sum[i * TN + j + 3] + beta * tempC.w;
+                    *reinterpret_cast<float4 *>(&C[row * N + col]) = tempC;
+                } else {
+#pragma unroll
+                    for (int k = 0; k < 4; ++k) {
+                        if (col + k < N) {
+                            C[row * N + col + k] = alpha * sum[i * TN + j + k] + beta * C[row * N + col + k];
+                        }
+                    }
+                }
             }
         }
     }

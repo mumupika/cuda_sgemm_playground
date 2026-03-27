@@ -280,7 +280,6 @@ float run_kernel<8>(
     return time.elapsed_millis();
 }
 
-
 float run_cutlass(
     int const M, int const N, int const K,
     float *hA, float *hB, float *hC,
