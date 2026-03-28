@@ -14,30 +14,7 @@
 
 #include "helper.h"
 #include "tools.h"
-#include "running.h"
-#include <string>
-
-template <size_t i>
-std::string get_kernel_name() {
-    if constexpr (i == 0) {
-        return "cublas";
-    } else if constexpr (i == 1) {
-        return "cutlass";
-    } else {
-        return "kernel " + std::to_string(i - 1);
-    }
-}
-
-template <int KernelId>
-auto getKernel() {
-    if constexpr (KernelId == 0) {
-        return run_cublas;
-    } else if constexpr (KernelId == 1) {
-        return run_cutlass;
-    } else if constexpr (KernelId >= 2 && KernelId < KERNEL_NUMS + 2) {
-        return run_kernel<KernelId - 1>;
-    }
-}
+#include "gemm_utils.cuh"
 
 template <int KernelId>
 void benchKernel(
