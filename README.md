@@ -30,16 +30,17 @@ async engine cnt: 2
 =====================================================================
 
 M = 4096, N = 4096, K = 4096
-cublas average elapsed time: 3.151971 ms, Calculate capability: 43604.127676 GFlops/s.
-cutlass average elapsed time: 3.260141 ms, Calculate capability: 42157.367083 GFlops/s.
+cublas average elapsed time: 3.182035 ms, Calculate capability: 43192.153282 GFlops/s.
+cutlass average elapsed time: 3.263507 ms, Calculate capability: 42113.880889 GFlops/s.
 
-kernel 1 average elapsed time: 203.513190 ms, Calculate capability: 675.331922 GFlops/s.
-kernel 2 average elapsed time: 25.753898 ms, Calculate capability: 5336.627304 GFlops/s.
-kernel 3 average elapsed time: 26.784688 ms, Calculate capability: 5131.250866 GFlops/s.
-kernel 4 average elapsed time: 28.972742 ms, Calculate capability: 4743.732964 GFlops/s.
-kernel 5 average elapsed time: 29.728295 ms, Calculate capability: 4623.169795 GFlops/s.
-kernel 6 average elapsed time: 8.317194 ms, Calculate capability: 16524.678689 GFlops/s.
-kernel 7 average elapsed time: 4.162794 ms, Calculate capability: 33016.038520 GFlops/s.
+kernel 1 average elapsed time: 203.519464 ms, Calculate capability: 675.311101 GFlops/s.
+kernel 2 average elapsed time: 25.719414 ms, Calculate capability: 5343.782394 GFlops/s.
+kernel 3 average elapsed time: 26.718560 ms, Calculate capability: 5143.950659 GFlops/s.
+kernel 4 average elapsed time: 28.989459 ms, Calculate capability: 4740.997460 GFlops/s.
+kernel 5 average elapsed time: 29.721933 ms, Calculate capability: 4624.159322 GFlops/s.
+kernel 6 average elapsed time: 7.620048 ms, Calculate capability: 18036.494568 GFlops/s.
+kernel 7 average elapsed time: 4.147638 ms, Calculate capability: 33136.677130 GFlops/s.
+kernel 8 average elapsed time: 3.715306 ms, Calculate capability: 36992.637887 GFlops/s.
 ```
 
 ## Roadmaps
@@ -51,3 +52,4 @@ kernel 7 average elapsed time: 4.162794 ms, Calculate capability: 33016.038520 G
 - [x] Kernel 5: dynamic 1-dim smem using (degrade)
 - [x] Kernel 6: increase arithmetic intensity (opt)
 - [x] Kernel 7: padding smem + arithmetic intensity to avoid bank conflict (opt)
+- [x] kernel 8: vectorised loading (opt)
