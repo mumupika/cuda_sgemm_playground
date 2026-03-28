@@ -54,10 +54,16 @@ void testKernel(
     float *dC;
 
     /// Here is the GPU take in. cudaMalloc dA, dB, dC in `prepare_matrix`.
-    CUDA_CHECK(cudaMalloc(&dA, sizeof(float) * M * K));
-    CUDA_CHECK(cudaMalloc(&dB, sizeof(float) * K * N));
-    CUDA_CHECK(cudaMalloc(&dC, sizeof(float) * M * N));
-
+    size_t pitchA;
+    size_t pitchB;
+    size_t pitchC;
+    CUDA_CHECK(cudaMallocPitch(&dA, &pitchA, sizeof(float) * K, M));
+    CUDA_CHECK(cudaMallocPitch(&dB, &pitchB, sizeof(float) * N, K));
+    CUDA_CHECK(cudaMallocPitch(&dC, &pitchC, sizeof(float) * N, M));
+    int ldA = pitchA / sizeof(float);
+    int ldB = pitchB / sizeof(float);
+    int ldC = pitchC / sizeof(float);
+    
     auto kernel = getKernel<KernelId>();
     printf("================================================================\n");
     printf("Started test %s.\n", name);
