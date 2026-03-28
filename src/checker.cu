@@ -54,13 +54,15 @@ void check_data(
 
 void check_cpu_result(
     int const M, int const N, // Dimensions;
+    int const ldC,            // C's leading dim;
     float const *reference,   // Host reference data;
     float const *dC           // Device Data;
 ) {
     float *result = static_cast<float *>(std::malloc(sizeof(float) * M * N));
 
     /// copy the data back.
-    CUDA_CHECK(cudaMemcpy(result, dC, sizeof(float) * M * N, cudaMemcpyDeviceToHost));
+    // CUDA_CHECK(cudaMemcpy(result, dC, sizeof(float) * M * N, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy2D(result, N * sizeof(float), dC, ldC * sizeof(float), N * sizeof(float), M, cudaMemcpyDeviceToHost));
 
     /// Check parity.
     bool pass = true;
@@ -94,25 +96,31 @@ void check_cutlass_result(
     float *dC;
 
     /// Here is the GPU take in. cudaMalloc dA, dB, dC in `prepare_matrix`.
-    CUDA_CHECK(cudaMalloc(&dA, sizeof(float) * M * K));
-    CUDA_CHECK(cudaMalloc(&dB, sizeof(float) * K * N));
-    CUDA_CHECK(cudaMalloc(&dC, sizeof(float) * M * N));
+    size_t pitchA;
+    size_t pitchB;
+    size_t pitchC;
+    CUDA_CHECK(cudaMallocPitch(&dA, &pitchA, sizeof(float) * K, M));
+    CUDA_CHECK(cudaMallocPitch(&dB, &pitchB, sizeof(float) * N, K));
+    CUDA_CHECK(cudaMallocPitch(&dC, &pitchC, sizeof(float) * N, M));
+    int ldA = pitchA / sizeof(float);
+    int ldB = pitchB / sizeof(float);
+    int ldC = pitchC / sizeof(float);
 
     /// copy datas.
     /// Now copy the data from host to GPU.
-    CUDA_CHECK(cudaMemcpy(dA, hA, sizeof(float) * M * K, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dB, hB, sizeof(float) * K * N, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dC, hC, sizeof(float) * M * N, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy2D(dA, ldA * sizeof(float), hA, K * sizeof(float), K * sizeof(float), M, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy2D(dB, ldB * sizeof(float), hB, N * sizeof(float), N * sizeof(float), K, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy2D(dC, ldC * sizeof(float), hC, N * sizeof(float), N * sizeof(float), M, cudaMemcpyHostToDevice));
 
     /// Real cutlass calculation.
-    CUDA_CHECK(CutlassSgemmNN(M, N, K, alpha, dA, dB, beta, dC));
+    CUDA_CHECK(CutlassSgemmNN(M, N, K, ldA, ldB, ldC, alpha, dA, dB, beta, dC));
 
     // host_data malloc.
     float *cutlass_hC = static_cast<float *>(std::malloc(sizeof(float) * M * N));
     float *kernel_hC = static_cast<float *>(std::malloc(sizeof(float) * M * N));
 
-    cudaMemcpy(cutlass_hC, dC, sizeof(float) * M * N, cudaMemcpyDeviceToHost);
-    cudaMemcpy(kernel_hC, old_dC, sizeof(float) * M * N, cudaMemcpyDeviceToHost);
+    CUDA_CHECK(cudaMemcpy2D(cutlass_hC, N * sizeof(float), dC, ldC * sizeof(float), N * sizeof(float), M, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy2D(kernel_hC, N * sizeof(float), old_dC, ldC * sizeof(float), N * sizeof(float), M, cudaMemcpyDeviceToHost));
 
     /// Check parity with GPU result.
     bool pass = true;
@@ -154,25 +162,31 @@ void check_cublas_result(
     float *dC;
 
     /// Here is the GPU take in. cudaMalloc dA, dB, dC in `prepare_matrix`.
-    CUDA_CHECK(cudaMalloc(&dA, sizeof(float) * M * K));
-    CUDA_CHECK(cudaMalloc(&dB, sizeof(float) * K * N));
-    CUDA_CHECK(cudaMalloc(&dC, sizeof(float) * M * N));
+    size_t pitchA;
+    size_t pitchB;
+    size_t pitchC;
+    CUDA_CHECK(cudaMallocPitch(&dA, &pitchA, sizeof(float) * K, M));
+    CUDA_CHECK(cudaMallocPitch(&dB, &pitchB, sizeof(float) * N, K));
+    CUDA_CHECK(cudaMallocPitch(&dC, &pitchC, sizeof(float) * N, M));
+    int ldA = pitchA / sizeof(float);
+    int ldB = pitchB / sizeof(float);
+    int ldC = pitchC / sizeof(float);
 
     /// copy datas.
     /// Now copy the data from host to GPU.
-    CUDA_CHECK(cudaMemcpy(dA, hA, sizeof(float) * M * K, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dB, hB, sizeof(float) * K * N, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dC, hC, sizeof(float) * M * N, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy2D(dA, ldA * sizeof(float), hA, K * sizeof(float), K * sizeof(float), M, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy2D(dB, ldB * sizeof(float), hB, N * sizeof(float), N * sizeof(float), K, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy2D(dC, ldC * sizeof(float), hC, N * sizeof(float), N * sizeof(float), M, cudaMemcpyHostToDevice));
 
     /// Real cutlass calculation.
-    CUBLAS_CHECK(CublasLauncher(M, N, K, alpha, dA, dB, beta, dC));
+    CUBLAS_CHECK(CublasLauncher(M, N, K, ldA, ldB, ldC, alpha, dA, dB, beta, dC));
 
     // host_data malloc.
     float *cublas_hC = static_cast<float *>(std::malloc(sizeof(float) * M * N));
     float *kernel_hC = static_cast<float *>(std::malloc(sizeof(float) * M * N));
 
-    cudaMemcpy(cublas_hC, dC, sizeof(float) * M * N, cudaMemcpyDeviceToHost);
-    cudaMemcpy(kernel_hC, old_dC, sizeof(float) * M * N, cudaMemcpyDeviceToHost);
+    CUDA_CHECK(cudaMemcpy2D(cublas_hC, N * sizeof(float), dC, ldC * sizeof(float), N * sizeof(float), M, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy2D(kernel_hC, N * sizeof(float), old_dC, ldC * sizeof(float), N * sizeof(float), M, cudaMemcpyDeviceToHost));
 
     /// Check parity with GPU result.
     bool pass = true;

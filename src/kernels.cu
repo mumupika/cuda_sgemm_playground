@@ -21,6 +21,7 @@
  */
 __global__ void sgemm_naive(
     int const M, int const N, int const K,
+    int const ldA, int const ldB, int const ldC,
     float const alpha,
     float const *A, float const *B,
     float const beta, float *C) {
@@ -30,21 +31,22 @@ __global__ void sgemm_naive(
     if (x < M && y < N) {
         float tmp = 0.0;
         for (int i = 0; i < K; i++) {
-            tmp += A[x * K + i] * B[i * N + y];
+            tmp += A[x * ldA + i] * B[i * ldB + y];
         }
         // C = \alpha * (A @ B) + \beta * C;
-        C[x * N + y] = alpha * tmp + beta * C[x * N + y];
+        C[x * ldC + y] = alpha * tmp + beta * C[x * ldC + y];
     }
 }
 
 void launch_sgemm_naive(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     const float *A, const float *B, float *C,
     float alpha, float beta,
     dim3 gridDim, dim3 blockDim,
     size_t sharedMemSize, cudaStream_t stream) {
     /// Get the kernel.
-    sgemm_naive<<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, alpha, A, B, beta, C);
+    sgemm_naive<<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, ldA, ldB, ldC, alpha, A, B, beta, C);
 }
 
 /**
@@ -225,6 +227,7 @@ void launch_sgemm_smem_opt(
 
 cublasStatus_t CublasLauncher(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     float alpha, const float *A, const float *B,
     float beta, float *C) {
     cublasHandle_t handle;
@@ -234,10 +237,10 @@ cublasStatus_t CublasLauncher(
         CUBLAS_OP_N, CUBLAS_OP_N,
         N, M, K,
         &alpha,
-        B, N,
-        A, K,
+        B, ldB,
+        A, ldA,
         &beta,
-        C, N));
+        C, ldC));
     CUBLAS_CHECK(cublasDestroy(handle));
     return CUBLAS_STATUS_SUCCESS;
 }

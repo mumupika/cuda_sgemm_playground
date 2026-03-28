@@ -89,9 +89,9 @@ void call_test(
 int main() {
     /// Matrix Dimension.
     /// Which means: A (M, K) @ B (K, N) * alpha + beta * C (M, N);
-    int M = 1023;
-    int N = 825;
-    int K = 971;
+    int M = 1777;
+    int N = 817;
+    int K = 973;
     bool check_result_flag = true;
 
     /// Get the device properties.
@@ -118,7 +118,10 @@ int main() {
 
     printf("M = %d, K = %d, N = %d Kernel test:\n", M, K, N);
 
-    call_test(M, N, K, hA, hB, hC, alpha, beta, check_result_flag, std::make_index_sequence<KERNEL_NUMS + 2>{});
+    // call_test(M, N, K, hA, hB, hC, alpha, beta, check_result_flag, std::make_index_sequence<KERNEL_NUMS + 2>{});
+    testKernel<0>(M, N, K, hA, hB, hC, alpha, beta, "cublas", check_result_flag);
+    testKernel<1>(M, N, K, hA, hB, hC, alpha, beta, "cutlass", check_result_flag);
+    testKernel<2>(M, N, K, hA, hB, hC, alpha, beta, "kernel 1", check_result_flag);
 
     /// free hA, hB, hC.
     std::free(hA);

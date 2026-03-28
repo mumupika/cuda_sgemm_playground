@@ -41,6 +41,7 @@ void check_data(
  */
 void check_cpu_result(
     int const M, int const N, // Dimensions;
+    int const ldC,
     float const *reference,   // Host reference data;
     float const *dC           // Device Data;
 );
@@ -60,6 +61,7 @@ void check_cpu_result(
  */
 cudaError_t CutlassSgemmNN(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     float alpha, const float *A, const float *B,
     float beta, float *C);
 

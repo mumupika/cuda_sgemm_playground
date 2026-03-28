@@ -22,7 +22,7 @@ float run_kernel<1>(
     /// launch the kernel from launcher.
     GpuTimer time{};
     time.start();
-    launch_sgemm_naive(M, N, K, dA, dB, dC, alpha, beta, gridDim, blockDim);
+    launch_sgemm_naive(M, N, K, ldA, ldB, ldC, dA, dB, dC, alpha, beta, gridDim, blockDim);
     time.stop();
 
     printf("Kernel 1: GPU executed elapsed: %f ms\n", time.elapsed_millis());
@@ -30,7 +30,7 @@ float run_kernel<1>(
     /// Check the data's correctivity.
     if (check_result_flag) {
         printf("==========================================================\n");
-        printf("Check with cpu result enabled. Checking...\n");
+        printf("Check with cublas result enabled. Checking...\n");
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
@@ -299,7 +299,7 @@ float run_cutlass(
     /// launch the kernel from launcher.
     GpuTimer time{};
     time.start();
-    CutlassSgemmNN(M, N, K, alpha, dA, dB, beta, dC);
+    CutlassSgemmNN(M, N, K, ldA, ldB, ldC, alpha, dA, dB, beta, dC);
     time.stop();
 
     printf("Cutlass basic example: GPU executed elapsed: %f ms\n", time.elapsed_millis());
@@ -309,7 +309,7 @@ float run_cutlass(
         printf("Check with cpu result enabled. Checking...\n");
         float *reference = static_cast<float *>(std::malloc(sizeof(float) * M * N));
         get_cpu_result(M, N, K, hA, hB, hC, reference, alpha, beta);
-        check_cpu_result(M, N, reference, dC);
+        check_cpu_result(M, N, ldC, reference, dC);
         printf("==========================================================\n");
         std::free(reference);
     }
@@ -327,7 +327,7 @@ float run_cublas(
     /// launch the kernel from launcher.
     GpuTimer time{};
     time.start();
-    CublasLauncher(M, N, K, alpha, dA, dB, beta, dC);
+    CublasLauncher(M, N, K, ldA, ldB, ldC, alpha, dA, dB, beta, dC);
     time.stop();
 
     printf("Cublas basic example: GPU executed elapsed: %f ms\n", time.elapsed_millis());
@@ -338,7 +338,7 @@ float run_cublas(
         printf("Check with cpu result enabled. Checking...\n");
         float *reference = static_cast<float *>(std::malloc(sizeof(float) * M * N));
         get_cpu_result(M, N, K, hA, hB, hC, reference, alpha, beta);
-        check_cpu_result(M, N, reference, dC);
+        check_cpu_result(M, N, ldC, reference, dC);
         printf("==========================================================\n");
         std::free(reference);
     }
