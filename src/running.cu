@@ -63,7 +63,7 @@ float run_kernel<2>(
     /// Check the data's correctivity.
     if (check_result_flag) {
         printf("==========================================================\n");
-        printf("Check with cpu result enabled. Checking...\n");
+        printf("Check with cublas result enabled. Checking...\n");
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
@@ -96,7 +96,7 @@ float run_kernel<3>(
     /// Check the data's correctivity.
     if (check_result_flag) {
         printf("==========================================================\n");
-        printf("Check with cpu result enabled. Checking...\n");
+        printf("Check with cublas result enabled. Checking...\n");
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
@@ -130,7 +130,7 @@ float run_kernel<4>(
     /// Check the data's correctivity.
     if (check_result_flag) {
         printf("==========================================================\n");
-        printf("Check with cpu result enabled. Checking...\n");
+        printf("Check with cublas result enabled. Checking...\n");
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
@@ -164,7 +164,7 @@ float run_kernel<5>(
     /// Check the data's correctivity.
     if (check_result_flag) {
         printf("==========================================================\n");
-        printf("Check with cpu result enabled. Checking...\n");
+        printf("Check with cublas result enabled. Checking...\n");
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
@@ -203,7 +203,7 @@ float run_kernel<6>(
     /// Check the data's correctivity.
     if (check_result_flag) {
         printf("==========================================================\n");
-        printf("Check with cpu result enabled. Checking...\n");
+        printf("Check with cublas result enabled. Checking...\n");
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
@@ -242,7 +242,7 @@ float run_kernel<7>(
     /// Check the data's correctivity.
     if (check_result_flag) {
         printf("==========================================================\n");
-        printf("Check with cpu result enabled. Checking...\n");
+        printf("Check with cublas result enabled. Checking...\n");
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
@@ -281,7 +281,7 @@ float run_kernel<8>(
     /// Check the data's correctivity.
     if (check_result_flag) {
         printf("==========================================================\n");
-        printf("Check with cpu result enabled. Checking...\n");
+        printf("Check with cublas result enabled. Checking...\n");
         check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
         printf("==========================================================\n");
     }
