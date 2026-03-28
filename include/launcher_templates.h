@@ -2,6 +2,7 @@
 template <int BM, int BN, int BK, int TM, int TN>
 __global__ void sgemm_reg_blocking(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     float alpha,
     const float *A, const float *B,
     float beta, float *C) {
@@ -33,7 +34,7 @@ __global__ void sgemm_reg_blocking(
             int global_row = block_row + share_row;
             int global_col = k_out + share_col;
             if (global_row < M && global_col < K) {
-                As[share_row][share_col] = A[global_row * K + global_col];
+                As[share_row][share_col] = A[global_row * ldA + global_col];
             } else {
                 As[share_row][share_col] = 0.0f;
             }
@@ -47,7 +48,7 @@ __global__ void sgemm_reg_blocking(
             int global_row = k_out + share_row;
             int global_col = block_col + share_col;
             if (global_row < K && global_col < N) {
-                Bs[share_row][share_col] = B[global_row * N + global_col];
+                Bs[share_row][share_col] = B[global_row * ldB + global_col];
             } else {
                 Bs[share_row][share_col] = 0.0f;
             }
@@ -75,7 +76,7 @@ __global__ void sgemm_reg_blocking(
             for (int j = 0; j < TN; j++) {
                 int col = output_col + j;
                 if (col < N) {
-                    C[row * N + col] = alpha * sum[i][j] + beta * C[row * N + col];
+                    C[row * ldC + col] = alpha * sum[i][j] + beta * C[row * ldC + col];
                 }
             }
         }
@@ -106,11 +107,12 @@ __global__ void sgemm_reg_blocking(
 template <int BM, int BN, int BK, int TM, int TN>
 void launch_sgemm_reg_blocking(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     const float *A, const float *B, float *C,
     float alpha, float beta,
     dim3 gridDim, dim3 blockDim,
     size_t sharedMemSize = 0, cudaStream_t stream = 0) {
-    sgemm_reg_blocking<BM, BN, BK, TM, TN><<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, alpha, A, B, beta, C);
+    sgemm_reg_blocking<BM, BN, BK, TM, TN><<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, ldA, ldB, ldC, alpha, A, B, beta, C);
 }
 
 /**
@@ -120,6 +122,7 @@ void launch_sgemm_reg_blocking(
 template <int BM, int BN, int BK, int TM, int TN>
 __global__ void sgemm_reg_block_opt(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     float alpha,
     const float *A, const float *B,
     float beta, float *C) {
@@ -150,7 +153,7 @@ __global__ void sgemm_reg_block_opt(
             int global_row = block_row + share_row;
             int global_col = k_out + share_col;
             if (global_row < M && global_col < K) {
-                As[share_row * (BK + 1) + share_col] = A[global_row * K + global_col];
+                As[share_row * (BK + 1) + share_col] = A[global_row * ldA + global_col];
             } else {
                 As[share_row * (BK + 1) + share_col] = 0.0f;
             }
@@ -163,7 +166,7 @@ __global__ void sgemm_reg_block_opt(
             int global_row = k_out + share_row;
             int global_col = block_col + share_col;
             if (global_row < K && global_col < N) {
-                Bs[share_row * (BN + 1) + share_col] = B[global_row * N + global_col];
+                Bs[share_row * (BN + 1) + share_col] = B[global_row * ldB + global_col];
             } else {
                 Bs[share_row * (BN + 1) + share_col] = 0.0f;
             }
@@ -191,7 +194,7 @@ __global__ void sgemm_reg_block_opt(
             for (int j = 0; j < TN; j++) {
                 int col = output_col + j;
                 if (col < N) {
-                    C[row * N + col] = alpha * sum[i * TN + j] + beta * C[row * N + col];
+                    C[row * ldC + col] = alpha * sum[i * TN + j] + beta * C[row * ldC + col];
                 }
             }
         }
@@ -222,11 +225,12 @@ __global__ void sgemm_reg_block_opt(
 template <int BM, int BN, int BK, int TM, int TN>
 void launch_sgemm_reg_block_opt(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     const float *A, const float *B, float *C,
     float alpha, float beta,
     dim3 gridDim, dim3 blockDim,
     size_t sharedMemSize = 0, cudaStream_t stream = 0) {
-    sgemm_reg_block_opt<BM, BN, BK, TM, TN><<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, alpha, A, B, beta, C);
+    sgemm_reg_block_opt<BM, BN, BK, TM, TN><<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, ldA, ldB, ldC, alpha, A, B, beta, C);
 }
 
 template <int BM, int BN, int BK, int TM, int TN>

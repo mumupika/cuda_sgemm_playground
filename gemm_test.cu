@@ -124,6 +124,8 @@ int main() {
     testKernel<4>(M, N, K, hA, hB, hC, alpha, beta, "kernel 3", check_result_flag);
     testKernel<5>(M, N, K, hA, hB, hC, alpha, beta, "kernel 4", check_result_flag);
     testKernel<6>(M, N, K, hA, hB, hC, alpha, beta, "kernel 5", check_result_flag);
+    testKernel<7>(M, N, K, hA, hB, hC, alpha, beta, "kernel 6", check_result_flag);
+    testKernel<8>(M, N, K, hA, hB, hC, alpha, beta, "kernel 7", check_result_flag);
 
     /// free hA, hB, hC.
     std::free(hA);

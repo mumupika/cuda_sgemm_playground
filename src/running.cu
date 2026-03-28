@@ -195,7 +195,7 @@ float run_kernel<6>(
     GpuTimer time{};
     time.start();
     size_t sharedMemSize = sizeof(float) * (BM * BK + BK * BN);
-    launch_sgemm_reg_blocking<BM, BN, BK, TM, TN>(M, N, K, dA, dB, dC, alpha, beta, gridDim, blockDim, sharedMemSize);
+    launch_sgemm_reg_blocking<BM, BN, BK, TM, TN>(M, N, K, ldA, ldB, ldC, dA, dB, dC, alpha, beta, gridDim, blockDim, sharedMemSize);
     time.stop();
 
     printf("Kernel 6: GPU executed elapsed: %f ms\n", time.elapsed_millis());
@@ -234,7 +234,7 @@ float run_kernel<7>(
     GpuTimer time{};
     time.start();
     size_t sharedMemSize = sizeof(float) * (BM * (BK + 1) + BK * (BN + 1));
-    launch_sgemm_reg_block_opt<BM, BN, BK, TM, TN>(M, N, K, dA, dB, dC, alpha, beta, gridDim, blockDim, sharedMemSize);
+    launch_sgemm_reg_block_opt<BM, BN, BK, TM, TN>(M, N, K, ldA, ldB, ldC, dA, dB, dC, alpha, beta, gridDim, blockDim, sharedMemSize);
     time.stop();
 
     printf("Kernel 7: GPU executed elapsed: %f ms\n", time.elapsed_millis());
