@@ -119,9 +119,11 @@ int main() {
     printf("M = %d, K = %d, N = %d Kernel test:\n", M, K, N);
 
     // call_test(M, N, K, hA, hB, hC, alpha, beta, check_result_flag, std::make_index_sequence<KERNEL_NUMS + 2>{});
-    testKernel<0>(M, N, K, hA, hB, hC, alpha, beta, "cublas", check_result_flag);
-    testKernel<1>(M, N, K, hA, hB, hC, alpha, beta, "cutlass", check_result_flag);
     testKernel<2>(M, N, K, hA, hB, hC, alpha, beta, "kernel 1", check_result_flag);
+    testKernel<3>(M, N, K, hA, hB, hC, alpha, beta, "kernel 2", check_result_flag);
+    testKernel<4>(M, N, K, hA, hB, hC, alpha, beta, "kernel 3", check_result_flag);
+    testKernel<5>(M, N, K, hA, hB, hC, alpha, beta, "kernel 4", check_result_flag);
+    testKernel<6>(M, N, K, hA, hB, hC, alpha, beta, "kernel 5", check_result_flag);
 
     /// free hA, hB, hC.
     std::free(hA);

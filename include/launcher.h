@@ -45,6 +45,7 @@ void launch_sgemm_naive(
  */
 void launch_sgemm_coalescing(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     const float *A, const float *B, float *C,
     float alpha, float beta,
     dim3 gridDim, dim3 blockDim,
@@ -69,6 +70,7 @@ void launch_sgemm_coalescing(
  */
 void launch_sgemm_coalescing2(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     const float *A, const float *B, float *C,
     float alpha, float beta,
     dim3 gridDim, dim3 blockDim, int const blockSize,
@@ -111,6 +113,7 @@ cublasStatus_t CublasLauncher(
  */
 void launch_sgemm_smem(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     const float *A, const float *B, float *C,
     float alpha, float beta,
     dim3 gridDim, dim3 blockDim,
@@ -135,6 +138,7 @@ void launch_sgemm_smem(
  */
 void launch_sgemm_smem_opt(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     const float *A, const float *B, float *C,
     float alpha, float beta,
     dim3 gridDim, dim3 blockDim, int const tileSize,

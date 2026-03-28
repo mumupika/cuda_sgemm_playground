@@ -55,7 +55,7 @@ float run_kernel<2>(
     /// launch the kernel from launcher.
     GpuTimer time{};
     time.start();
-    launch_sgemm_coalescing(M, N, K, dA, dB, dC, alpha, beta, gridDim, blockDim);
+    launch_sgemm_coalescing(M, N, K, ldA, ldB, ldC, dA, dB, dC, alpha, beta, gridDim, blockDim);
     time.stop();
 
     printf("Kernel 2: GPU executed elapsed: %f ms\n", time.elapsed_millis());
@@ -88,7 +88,7 @@ float run_kernel<3>(
     /// launch the kernel from launcher.
     GpuTimer time{};
     time.start();
-    launch_sgemm_coalescing2(M, N, K, dA, dB, dC, alpha, beta, gridDim, blockDim, blockSize);
+    launch_sgemm_coalescing2(M, N, K, ldA, ldB, ldC, dA, dB, dC, alpha, beta, gridDim, blockDim, blockSize);
     time.stop();
 
     printf("Kernel 3: GPU executed elapsed: %f ms\n", time.elapsed_millis());
@@ -122,7 +122,7 @@ float run_kernel<4>(
     GpuTimer time{};
     time.start();
     size_t sharedMemSize = 2 * tileSize * tileSize * sizeof(float);
-    launch_sgemm_smem(M, N, K, dA, dB, dC, alpha, beta, gridDim, blockDim, sharedMemSize);
+    launch_sgemm_smem(M, N, K, ldA, ldB, ldC, dA, dB, dC, alpha, beta, gridDim, blockDim, sharedMemSize);
     time.stop();
 
     printf("Kernel 4: GPU executed elapsed: %f ms\n", time.elapsed_millis());
@@ -156,7 +156,7 @@ float run_kernel<5>(
     GpuTimer time{};
     time.start();
     size_t sharedMemSize = 2 * tileSize * tileSize * sizeof(float);
-    launch_sgemm_smem_opt(M, N, K, dA, dB, dC, alpha, beta, gridDim, blockDim, tileSize, sharedMemSize);
+    launch_sgemm_smem_opt(M, N, K, ldA, ldB, ldC, dA, dB, dC, alpha, beta, gridDim, blockDim, tileSize, sharedMemSize);
     time.stop();
 
     printf("Kernel 5: GPU executed elapsed: %f ms\n", time.elapsed_millis());
