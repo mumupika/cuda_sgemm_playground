@@ -236,6 +236,7 @@ void launch_sgemm_reg_block_opt(
 template <int BM, int BN, int BK, int TM, int TN>
 __global__ void sgemm_vec_load(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     float alpha,
     const float *A, const float *B,
     float beta, float *C) {
@@ -260,28 +261,11 @@ __global__ void sgemm_vec_load(
             int share_col = idx % BK;
             int global_row = block_row + share_row;
             int global_col = k_out + share_col;
-            float vals[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-            if (global_row < M) {
-                if (global_col + 3 < K && ((global_row * K + global_col) & 3) == 0) {
-                    // vectorized load.
-                    float4 global_A = *reinterpret_cast<const float4 *>(&A[global_row * K + global_col]);
-                    vals[0] = global_A.x;
-                    vals[1] = global_A.y;
-                    vals[2] = global_A.z;
-                    vals[3] = global_A.w;
-                } else {
-#pragma unroll
-                    for (int i = 0; i < 4; ++i) {
-                        if (global_col + i < K) {
-                            vals[i] = A[global_row * K + global_col + i];
-                        }
-                    }
-                }
-            }
-            As[share_row * BK + share_col + 0] = vals[0];
-            As[share_row * BK + share_col + 1] = vals[1];
-            As[share_row * BK + share_col + 2] = vals[2];
-            As[share_row * BK + share_col + 3] = vals[3];
+            float4 global_A = *reinterpret_cast<const float4*>(&A[global_row * ldA + global_col]);
+            As[share_row * BK + share_col] = global_A.x;
+            As[share_row * BK + share_col + 1] = global_A.y;
+            As[share_row * BK + share_col + 2] = global_A.z;
+            As[share_row * BK + share_col + 3] = global_A.w;
         }
 
         for (int idx = tid * 4; idx < BK * BN; idx += num_threads * 4) {
@@ -289,28 +273,11 @@ __global__ void sgemm_vec_load(
             int share_col = idx % BN;
             int global_row = k_out + share_row;
             int global_col = block_col + share_col;
-            float vals[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-            if (global_row < K) {
-                if (global_col + 3 < N && ((global_row * N + global_col) & 3) == 0) {
-                    // vectorized load.
-                    float4 global_B = *reinterpret_cast<const float4 *>(&B[global_row * N + global_col]);
-                    vals[0] = global_B.x;
-                    vals[1] = global_B.y;
-                    vals[2] = global_B.z;
-                    vals[3] = global_B.w;
-                } else {
-#pragma unroll
-                    for (int i = 0; i < 4; ++i) {
-                        if (global_col + i < N) {
-                            vals[i] = B[global_row * N + global_col + i];
-                        }
-                    }
-                }
-            }
-            Bs[share_row * BN + share_col + 0] = vals[0];
-            Bs[share_row * BN + share_col + 1] = vals[1];
-            Bs[share_row * BN + share_col + 2] = vals[2];
-            Bs[share_row * BN + share_col + 3] = vals[3];
+            float4 global_B = *reinterpret_cast<const float4*>(&B[global_row * ldB + global_col]);
+            Bs[share_row * BN + share_col] = global_B.x;
+            Bs[share_row * BN + share_col + 1] = global_B.y;
+            Bs[share_row * BN + share_col + 2] = global_B.z;
+            Bs[share_row * BN + share_col + 3] = global_B.w;
         }
         __syncthreads();
 #pragma unroll
@@ -332,22 +299,12 @@ __global__ void sgemm_vec_load(
 #pragma unroll
             for (int j = 0; j < TN; j += 4) {
                 int col = output_col + j;
-                if (col + 3 < N && ((row * N + col) & 3) == 0) {
-                    float4 tempC;
-                    tempC = *reinterpret_cast<float4 *>(&C[row * N + col]);
-                    tempC.x = alpha * sum[i * TN + j] + beta * tempC.x;
-                    tempC.y = alpha * sum[i * TN + j + 1] + beta * tempC.y;
-                    tempC.z = alpha * sum[i * TN + j + 2] + beta * tempC.z;
-                    tempC.w = alpha * sum[i * TN + j + 3] + beta * tempC.w;
-                    *reinterpret_cast<float4 *>(&C[row * N + col]) = tempC;
-                } else {
-#pragma unroll
-                    for (int k = 0; k < 4; ++k) {
-                        if (col + k < N) {
-                            C[row * N + col + k] = alpha * sum[i * TN + j + k] + beta * C[row * N + col + k];
-                        }
-                    }
-                }
+                float4 tempC = *reinterpret_cast<float4*>(&C[row * ldC + col]);
+                tempC.x = alpha * sum[i * TN + j]     + beta * tempC.x;
+                tempC.y = alpha * sum[i * TN + j + 1] + beta * tempC.y;
+                tempC.z = alpha * sum[i * TN + j + 2] + beta * tempC.z;
+                tempC.w = alpha * sum[i * TN + j + 3] + beta * tempC.w;
+                *reinterpret_cast<float4*>(&C[row * ldC + col]) = tempC;
             }
         }
     }
@@ -377,9 +334,10 @@ __global__ void sgemm_vec_load(
 template <int BM, int BN, int BK, int TM, int TN>
 void launch_sgemm_vec_load(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     const float *A, const float *B, float *C,
     float alpha, float beta,
     dim3 gridDim, dim3 blockDim,
     size_t sharedMemSize = 0, cudaStream_t stream = 0) {
-    sgemm_vec_load<BM, BN, BK, TM, TN><<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, alpha, A, B, beta, C);
+    sgemm_vec_load<BM, BN, BK, TM, TN><<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, ldA, ldB, ldC, alpha, A, B, beta, C);
 }

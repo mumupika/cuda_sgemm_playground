@@ -273,7 +273,7 @@ float run_kernel<8>(
     GpuTimer time{};
     time.start();
     size_t sharedMemSize = sizeof(float) * (BM * (BK + 1) + BK * (BN + 1));
-    launch_sgemm_vec_load<BM, BN, BK, TM, TN>(M, N, K, dA, dB, dC, alpha, beta, gridDim, blockDim, sharedMemSize);
+    launch_sgemm_vec_load<BM, BN, BK, TM, TN>(M, N, K, ldA, ldB, ldC, dA, dB, dC, alpha, beta, gridDim, blockDim, sharedMemSize);
     time.stop();
 
     printf("Kernel 8: GPU executed elapsed: %f ms\n", time.elapsed_millis());
