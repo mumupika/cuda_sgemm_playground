@@ -242,7 +242,7 @@ __global__ void sgemm_vec_load(
     float beta, float *C) {
     extern __shared__ float smem[];
     float *As = smem;
-    float *Bs = &smem[BM * BK];
+    float *Bs = &smem[BM * (BK + 1)];
     // thread in current block.
     const int tx = threadIdx.x;
     const int ty = threadIdx.y;
@@ -262,22 +262,21 @@ __global__ void sgemm_vec_load(
             int global_row = block_row + share_row;
             int global_col = k_out + share_col;
             float4 global_A = *reinterpret_cast<const float4*>(&A[global_row * ldA + global_col]);
-            As[share_row * BK + share_col] = global_A.x;
-            As[share_row * BK + share_col + 1] = global_A.y;
-            As[share_row * BK + share_col + 2] = global_A.z;
-            As[share_row * BK + share_col + 3] = global_A.w;
+            As[share_row * (BK + 1) + share_col] = global_A.x;
+            As[share_row * (BK + 1) + share_col + 1] = global_A.y;
+            As[share_row * (BK + 1) + share_col + 2] = global_A.z;
+            As[share_row * (BK + 1) + share_col + 3] = global_A.w;
         }
-
         for (int idx = tid * 4; idx < BK * BN; idx += num_threads * 4) {
             int share_row = idx / BN;
             int share_col = idx % BN;
             int global_row = k_out + share_row;
             int global_col = block_col + share_col;
             float4 global_B = *reinterpret_cast<const float4*>(&B[global_row * ldB + global_col]);
-            Bs[share_row * BN + share_col] = global_B.x;
-            Bs[share_row * BN + share_col + 1] = global_B.y;
-            Bs[share_row * BN + share_col + 2] = global_B.z;
-            Bs[share_row * BN + share_col + 3] = global_B.w;
+            Bs[share_row * (BN + 1) + share_col] = global_B.x;
+            Bs[share_row * (BN + 1) + share_col + 1] = global_B.y;
+            Bs[share_row * (BN + 1) + share_col + 2] = global_B.z;
+            Bs[share_row * (BN + 1) + share_col + 3] = global_B.w;
         }
         __syncthreads();
 #pragma unroll
@@ -286,7 +285,7 @@ __global__ void sgemm_vec_load(
             for (int i = 0; i < TM; i++) {
 #pragma unroll
                 for (int j = 0; j < TN; j++) {
-                    sum[i * TN + j] += As[(ty * TM + i) * BK + k_in] * Bs[k_in * BN + tx * TN + j];
+                    sum[i * TN + j] += As[(ty * TM + i) * (BK + 1) + k_in] * Bs[k_in * (BN + 1) + tx * TN + j];
                 }
             }
         }
