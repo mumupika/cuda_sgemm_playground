@@ -63,11 +63,11 @@ void testKernel(
     int ldA = pitchA / sizeof(float);
     int ldB = pitchB / sizeof(float);
     int ldC = pitchC / sizeof(float);
-    
+
     auto kernel = getKernel<KernelId>();
     printf("================================================================\n");
     printf("Started test %s.\n", name);
-    kernel(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
+    kernel(M, N, K, ldA, ldB, ldC, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
     printf("================================================================\n");
 
     /// Cudafree hA, hB, hC.

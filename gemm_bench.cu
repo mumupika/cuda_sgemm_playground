@@ -67,7 +67,7 @@ void benchKernel(
     printf("================================================================\n");
     printf("This is the first warm up.\n");
     printf("================================================================\n");
-    kernel(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
+    kernel(M, N, K, ldA, ldB, ldC, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
     printf("================================================================\n");
     cudaDeviceSynchronize();
 
@@ -75,7 +75,7 @@ void benchKernel(
     float time;
     double elapsed_milis = 0.0;
     for (int i = 0; i < 10; i++) {
-        time = kernel(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
+        time = kernel(M, N, K, ldA, ldB, ldC, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
         elapsed_milis += time;
         cudaDeviceSynchronize();
     }
