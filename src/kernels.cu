@@ -21,6 +21,7 @@
  */
 __global__ void sgemm_naive(
     int const M, int const N, int const K,
+    int const ldA, int const ldB, int const ldC,
     float const alpha,
     float const *A, float const *B,
     float const beta, float *C) {
@@ -30,21 +31,22 @@ __global__ void sgemm_naive(
     if (x < M && y < N) {
         float tmp = 0.0;
         for (int i = 0; i < K; i++) {
-            tmp += A[x * K + i] * B[i * N + y];
+            tmp += A[x * ldA + i] * B[i * ldB + y];
         }
         // C = \alpha * (A @ B) + \beta * C;
-        C[x * N + y] = alpha * tmp + beta * C[x * N + y];
+        C[x * ldC + y] = alpha * tmp + beta * C[x * ldC + y];
     }
 }
 
 void launch_sgemm_naive(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     const float *A, const float *B, float *C,
     float alpha, float beta,
     dim3 gridDim, dim3 blockDim,
     size_t sharedMemSize, cudaStream_t stream) {
     /// Get the kernel.
-    sgemm_naive<<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, alpha, A, B, beta, C);
+    sgemm_naive<<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, ldA, ldB, ldC, alpha, A, B, beta, C);
 }
 
 /**
@@ -53,6 +55,7 @@ void launch_sgemm_naive(
  */
 __global__ void sgemm_coalescing(
     int const M, int const N, int const K,
+    int const ldA, int const ldB, int const ldC,
     float const alpha,
     float const *A, float const *B,
     float const beta, float *C) {
@@ -62,20 +65,21 @@ __global__ void sgemm_coalescing(
     if (row < M && col < N) {
         float tmp = 0.0;
         for (int i = 0; i < K; i++) {
-            tmp += A[row * K + i] * B[i * N + col];
+            tmp += A[row * ldA + i] * B[i * ldB + col];
         }
         // C = \alpha * (A @ B) + \beta * C;
-        C[row * N + col] = alpha * tmp + beta * C[row * N + col];
+        C[row * ldC + col] = alpha * tmp + beta * C[row * ldC + col];
     }
 }
 
 void launch_sgemm_coalescing(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     const float *A, const float *B, float *C,
     float alpha, float beta,
     dim3 gridDim, dim3 blockDim,
     size_t sharedMemSize, cudaStream_t stream) {
-    sgemm_coalescing<<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, alpha, A, B, beta, C);
+    sgemm_coalescing<<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, ldA, ldB, ldC, alpha, A, B, beta, C);
 }
 
 /**
@@ -84,6 +88,7 @@ void launch_sgemm_coalescing(
  */
 __global__ void sgemm_coalescing2(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     float alpha,
     const float *A, const float *B,
     float beta, float *C,
@@ -94,24 +99,26 @@ __global__ void sgemm_coalescing2(
     if (x < M && y < N) {
         float tmp = 0.0;
         for (int i = 0; i < K; i++) {
-            tmp += A[x * K + i] * B[i * N + y];
+            tmp += A[x * ldA + i] * B[i * ldB + y];
         }
         // C = \alpha * (A @ B) + \beta * C;
-        C[x * N + y] = alpha * tmp + beta * C[x * N + y];
+        C[x * ldC + y] = alpha * tmp + beta * C[x * ldC + y];
     }
 }
 
 void launch_sgemm_coalescing2(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     const float *A, const float *B, float *C,
     float alpha, float beta,
     dim3 gridDim, dim3 blockDim, int const blockSize,
     size_t sharedMemSize, cudaStream_t stream) {
-    sgemm_coalescing2<<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, alpha, A, B, beta, C, blockSize);
+    sgemm_coalescing2<<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, ldA, ldB, ldC, alpha, A, B, beta, C, blockSize);
 }
 
 __global__ void sgemm_smem(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     float alpha,
     const float *A, const float *B,
     float beta, float *C) {
@@ -133,7 +140,7 @@ __global__ void sgemm_smem(
         int row_a = by * tileSize + ty;
         int col_a = k_out + tx;
         if (row_a < M && col_a < K) {
-            As[ty][tx] = A[row_a * K + col_a];
+            As[ty][tx] = A[row_a * ldA + col_a];
         } else {
             As[ty][tx] = 0;
         }
@@ -141,7 +148,7 @@ __global__ void sgemm_smem(
         int row_b = k_out + ty;
         int col_b = bx * tileSize + tx;
         if (row_b < K && col_b < N) {
-            Bs[ty][tx] = B[row_b * N + col_b];
+            Bs[ty][tx] = B[row_b * ldB + col_b];
         } else {
             Bs[ty][tx] = 0;
         }
@@ -153,21 +160,23 @@ __global__ void sgemm_smem(
     }
 
     if (row_c < M && col_c < N) {
-        C[row_c * N + col_c] = alpha * sum + beta * C[row_c * N + col_c];
+        C[row_c * ldC + col_c] = alpha * sum + beta * C[row_c * ldC + col_c];
     }
 }
 
 void launch_sgemm_smem(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     const float *A, const float *B, float *C,
     float alpha, float beta,
     dim3 gridDim, dim3 blockDim,
     size_t sharedMemSize, cudaStream_t stream) {
-    sgemm_smem<<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, alpha, A, B, beta, C);
+    sgemm_smem<<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, ldA, ldB, ldC, alpha, A, B, beta, C);
 }
 
 __global__ void sgemm_smem_opt(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     float alpha,
     const float *A, const float *B,
     float beta, float *C,
@@ -190,7 +199,7 @@ __global__ void sgemm_smem_opt(
         int row_a = by * tileSize + ty;
         int col_a = k_out + tx;
         if (row_a < M && col_a < K) {
-            As[ty * tileSize + tx] = A[row_a * K + col_a];
+            As[ty * tileSize + tx] = A[row_a * ldA + col_a];
         } else {
             As[ty * tileSize + tx] = 0;
         }
@@ -198,7 +207,7 @@ __global__ void sgemm_smem_opt(
         int row_b = k_out + ty;
         int col_b = bx * tileSize + tx;
         if (row_b < K && col_b < N) {
-            Bs[ty * tileSize + tx] = B[row_b * N + col_b];
+            Bs[ty * tileSize + tx] = B[row_b * ldB + col_b];
         } else {
             Bs[ty * tileSize + tx] = 0;
         }
@@ -210,21 +219,23 @@ __global__ void sgemm_smem_opt(
     }
 
     if (row_c < M && col_c < N) {
-        C[row_c * N + col_c] = alpha * sum + beta * C[row_c * N + col_c];
+        C[row_c * ldC + col_c] = alpha * sum + beta * C[row_c * ldC + col_c];
     }
 }
 
 void launch_sgemm_smem_opt(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     const float *A, const float *B, float *C,
     float alpha, float beta,
     dim3 gridDim, dim3 blockDim, int const tileSize,
     size_t sharedMemSize, cudaStream_t stream) {
-    sgemm_smem_opt<<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, alpha, A, B, beta, C, tileSize);
+    sgemm_smem_opt<<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, ldA, ldB, ldC, alpha, A, B, beta, C, tileSize);
 }
 
 cublasStatus_t CublasLauncher(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     float alpha, const float *A, const float *B,
     float beta, float *C) {
     cublasHandle_t handle;
@@ -234,10 +245,10 @@ cublasStatus_t CublasLauncher(
         CUBLAS_OP_N, CUBLAS_OP_N,
         N, M, K,
         &alpha,
-        B, N,
-        A, K,
+        B, ldB,
+        A, ldA,
         &beta,
-        C, N));
+        C, ldC));
     CUBLAS_CHECK(cublasDestroy(handle));
     return CUBLAS_STATUS_SUCCESS;
 }

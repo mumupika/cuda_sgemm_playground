@@ -55,13 +55,14 @@ void prepare_matrix(
 
 void memHtoD(
     int M, int N, int K,             // Dimensions;
+    int ldA, int ldB, int ldC,       // padding dim;
     float *hA, float *hB, float *hC, // Host data;
     float *dA, float *dB, float *dC  // Device Data;
 ) {
     /// Now copy the data from host to GPU.
-    CUDA_CHECK(cudaMemcpy(dA, hA, sizeof(float) * M * K, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dB, hB, sizeof(float) * K * N, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dC, hC, sizeof(float) * M * N, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy2D(dA, ldA * sizeof(float), hA, K * sizeof(float), K * sizeof(float), M, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy2D(dB, ldB * sizeof(float), hB, N * sizeof(float), N * sizeof(float), K, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy2D(dC, ldC * sizeof(float), hC, N * sizeof(float), N * sizeof(float), M, cudaMemcpyHostToDevice));
 }
 
 void get_cpu_result(

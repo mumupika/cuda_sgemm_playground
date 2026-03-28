@@ -1,11 +1,12 @@
 #pragma once
 
 #include "helper.h"
-#define KERNEL_NUMS 7
+#define KERNEL_NUMS 8
 
 template <int KernelId>
 std::enable_if_t<((KernelId >= 0) && (KernelId < KERNEL_NUMS + 1)), float>
 run_kernel(int const M, int const N, int const K,
+           int const ldA, int const ldB, int const ldC,
            float *hA, float *hB, float *hC,
            float *dA, float *dB, float *dC,
            float const alpha, float const beta,
@@ -13,13 +14,14 @@ run_kernel(int const M, int const N, int const K,
     return float();
 }
 
-#define KERNEL(id)                             \
-    template <>                                \
-    float run_kernel<id>(                      \
-        int const M, int const N, int const K, \
-        float *hA, float *hB, float *hC,       \
-        float *dA, float *dB, float *dC,       \
-        float const alpha, float const beta,   \
+#define KERNEL(id)                                   \
+    template <>                                      \
+    float run_kernel<id>(                            \
+        int const M, int const N, int const K,       \
+        int const ldA, int const ldB, int const ldC, \
+        float *hA, float *hB, float *hC,             \
+        float *dA, float *dB, float *dC,             \
+        float const alpha, float const beta,         \
         bool const check_result_flag);
 
 #define KERNEL_GEN \
@@ -29,7 +31,8 @@ run_kernel(int const M, int const N, int const K,
     KERNEL(4)      \
     KERNEL(5)      \
     KERNEL(6)      \
-    KERNEL(7)
+    KERNEL(7)      \
+    KERNEL(8)
 
 KERNEL_GEN
 
@@ -38,6 +41,7 @@ KERNEL_GEN
 
 float run_cutlass(
     int const M, int const N, int const K,
+    int const ldA, int const ldB, int const ldC,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
     float const alpha, float const beta,
@@ -45,6 +49,7 @@ float run_cutlass(
 
 float run_cublas(
     int const M, int const N, int const K,
+    int const ldA, int const ldB, int const ldC,
     float *hA, float *hB, float *hC,
     float *dA, float *dB, float *dC,
     float const alpha, float const beta,

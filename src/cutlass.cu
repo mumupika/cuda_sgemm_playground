@@ -6,6 +6,7 @@
 
 cudaError_t CutlassSgemmNN(
     int M, int N, int K,
+    int ldA, int ldB, int ldC,
     float alpha, const float *A, const float *B,
     float beta, float *C) {
     using RowMajor = cutlass::layout::RowMajor;
@@ -18,10 +19,10 @@ cudaError_t CutlassSgemmNN(
     CutlassGemm gemm_operator;
     CutlassGemm::Arguments args(
         {M, N, K},
-        {A, K},
-        {B, N},
-        {C, N},
-        {C, N},
+        {A, ldA},
+        {B, ldB},
+        {C, ldC},
+        {C, ldC},
         {alpha, beta});
 
     cutlass::Status status = gemm_operator(args);

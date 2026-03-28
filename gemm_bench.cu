@@ -14,30 +14,7 @@
 
 #include "helper.h"
 #include "tools.h"
-#include "running.h"
-#include <string>
-
-template <size_t i>
-std::string get_kernel_name() {
-    if constexpr (i == 0) {
-        return "cublas";
-    } else if constexpr (i == 1) {
-        return "cutlass";
-    } else {
-        return "kernel " + std::to_string(i - 1);
-    }
-}
-
-template <int KernelId>
-auto getKernel() {
-    if constexpr (KernelId == 0) {
-        return run_cublas;
-    } else if constexpr (KernelId == 1) {
-        return run_cutlass;
-    } else if constexpr (KernelId >= 2 && KernelId < KERNEL_NUMS + 2) {
-        return run_kernel<KernelId - 1>;
-    }
-}
+#include "gemm_utils.cuh"
 
 template <int KernelId>
 void benchKernel(
@@ -52,16 +29,22 @@ void benchKernel(
     float *dC;
 
     /// Here is the GPU take in. cudaMalloc dA, dB, dC in `prepare_matrix`.
-    CUDA_CHECK(cudaMalloc(&dA, sizeof(float) * M * K));
-    CUDA_CHECK(cudaMalloc(&dB, sizeof(float) * K * N));
-    CUDA_CHECK(cudaMalloc(&dC, sizeof(float) * M * N));
+    size_t pitchA;
+    size_t pitchB;
+    size_t pitchC;
+    CUDA_CHECK(cudaMallocPitch(&dA, &pitchA, sizeof(float) * K, M));
+    CUDA_CHECK(cudaMallocPitch(&dB, &pitchB, sizeof(float) * N, K));
+    CUDA_CHECK(cudaMallocPitch(&dC, &pitchC, sizeof(float) * N, M));
+    int ldA = pitchA / sizeof(float);
+    int ldB = pitchB / sizeof(float);
+    int ldC = pitchC / sizeof(float);
 
     auto kernel = getKernel<KernelId>();
 
     printf("================================================================\n");
     printf("This is the first warm up.\n");
     printf("================================================================\n");
-    kernel(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
+    kernel(M, N, K, ldA, ldB, ldC, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
     printf("================================================================\n");
     cudaDeviceSynchronize();
 
@@ -69,7 +52,7 @@ void benchKernel(
     float time;
     double elapsed_milis = 0.0;
     for (int i = 0; i < 10; i++) {
-        time = kernel(M, N, K, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
+        time = kernel(M, N, K, ldA, ldB, ldC, hA, hB, hC, dA, dB, dC, alpha, beta, check_result_flag);
         elapsed_milis += time;
         cudaDeviceSynchronize();
     }
