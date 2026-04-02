@@ -1,7 +1,7 @@
 #pragma once
 
 #include "helper.h"
-#define KERNEL_NUMS 8
+#define KERNEL_NUMS 9
 
 template <int KernelId>
 std::enable_if_t<((KernelId >= 0) && (KernelId < KERNEL_NUMS + 1)), float>
@@ -32,7 +32,8 @@ run_kernel(int const M, int const N, int const K,
     KERNEL(5)      \
     KERNEL(6)      \
     KERNEL(7)      \
-    KERNEL(8)
+    KERNEL(8)      \
+    KERNEL(9)
 
 KERNEL_GEN
 
