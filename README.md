@@ -30,17 +30,18 @@ async engine cnt: 2
 =====================================================================
 
 M = 4096, N = 4096, K = 4096
-cublas average elapsed time: 3.182035 ms, Calculate capability: 43192.153282 GFlops/s.
-cutlass average elapsed time: 3.263507 ms, Calculate capability: 42113.880889 GFlops/s.
+cublas average elapsed time: 3.162998 ms, Calculate capability: 43452.109839 GFlops/s.
+cutlass average elapsed time: 3.265565 ms, Calculate capability: 42087.345350 GFlops/s.
 
-kernel 1 average elapsed time: 203.519464 ms, Calculate capability: 675.311101 GFlops/s.
-kernel 2 average elapsed time: 25.719414 ms, Calculate capability: 5343.782394 GFlops/s.
-kernel 3 average elapsed time: 26.718560 ms, Calculate capability: 5143.950659 GFlops/s.
-kernel 4 average elapsed time: 28.989459 ms, Calculate capability: 4740.997460 GFlops/s.
-kernel 5 average elapsed time: 29.721933 ms, Calculate capability: 4624.159322 GFlops/s.
-kernel 6 average elapsed time: 7.620048 ms, Calculate capability: 18036.494568 GFlops/s.
-kernel 7 average elapsed time: 4.147638 ms, Calculate capability: 33136.677130 GFlops/s.
-kernel 8 average elapsed time: 3.715306 ms, Calculate capability: 36992.637887 GFlops/s.
+kernel 1 average elapsed time: 203.515779 ms, Calculate capability: 675.323329 GFlops/s.
+kernel 2 average elapsed time: 25.633101 ms, Calculate capability: 5361.776364 GFlops/s.
+kernel 3 average elapsed time: 26.871325 ms, Calculate capability: 5114.707029 GFlops/s.
+kernel 4 average elapsed time: 28.988717 ms, Calculate capability: 4741.118929 GFlops/s.
+kernel 5 average elapsed time: 29.708227 ms, Calculate capability: 4626.292697 GFlops/s.
+kernel 6 average elapsed time: 7.618234 ms, Calculate capability: 18040.790043 GFlops/s.
+kernel 7 average elapsed time: 4.151139 ms, Calculate capability: 33108.732235 GFlops/s.
+kernel 8 average elapsed time: 3.722685 ms, Calculate capability: 36919.309690 GFlops/s.
+kernel 9 average elapsed time: 3.363171 ms, Calculate capability: 40865.880300 GFlops/s.
 ```
 
 ## Roadmaps
@@ -53,3 +54,4 @@ kernel 8 average elapsed time: 3.715306 ms, Calculate capability: 36992.637887 G
 - [x] Kernel 6: increase arithmetic intensity (opt)
 - [x] Kernel 7: padding smem + arithmetic intensity to avoid bank conflict (opt)
 - [x] kernel 8: vectorised loading (opt)
+- [x] Kernel 9: warp tiling (opt).
