@@ -313,7 +313,7 @@ float run_kernel<9>(
     /// launch the kernel from launcher.
     GpuTimer time{};
     time.start();
-    size_t sharedMemSize = sizeof(float) * (BM * BK + BK * BN);
+    size_t sharedMemSize = sizeof(float) * ((BM + 1) * (BK + 1) + BK * (BN + 1));
     launch_sgemm_warp_tiling<BM, BN, BK, WM, WN, TM, TN>(M, N, K, ldA, ldB, ldC, dA, dB, dC, alpha, beta, gridDim, blockDim, sharedMemSize);
     time.stop();
 

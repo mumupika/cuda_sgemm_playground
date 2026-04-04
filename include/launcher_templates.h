@@ -350,7 +350,7 @@ __global__ void sgemm_warp_tiling(
     float beta, float *C) {
     extern __shared__ float smem[];
     float *As = smem;
-    float *Bs = &smem[BM * BK];
+    float *Bs = &smem[(BM + 1) * (BK + 1)];
 
     // We should calculate the base address for all hierarchies.
     // First the block. From execute model -> memory model.
@@ -396,10 +396,10 @@ __global__ void sgemm_warp_tiling(
             int global_row = block_row + share_row;
             int global_col = kb + share_col;
             float4 global_A = *reinterpret_cast<const float4 *>(&A[global_row * ldA + global_col]);
-            As[share_row + share_col * BM] = global_A.x;
-            As[share_row + (share_col + 1) * BM] = global_A.y;
-            As[share_row + (share_col + 2) * BM] = global_A.z;
-            As[share_row + (share_col + 3) * BM] = global_A.w;
+            As[share_row * (BK + 1) + share_col] = global_A.x;
+            As[share_row * (BK + 1) + (share_col + 1)] = global_A.y;
+            As[share_row * (BK + 1) + (share_col + 2)] = global_A.z;
+            As[share_row * (BK + 1) + (share_col + 3)] = global_A.w;
         }
         for (int idx = tid * 4; idx < BK * BN; idx += num_threads * 4) {
             int share_row = idx / BN;
@@ -407,10 +407,10 @@ __global__ void sgemm_warp_tiling(
             int global_row = kb + share_row;
             int global_col = block_col + share_col;
             float4 global_B = *reinterpret_cast<const float4 *>(&B[global_row * ldB + global_col]);
-            Bs[share_row * BN + share_col] = global_B.x;
-            Bs[share_row * BN + share_col + 1] = global_B.y;
-            Bs[share_row * BN + share_col + 2] = global_B.z;
-            Bs[share_row * BN + share_col + 3] = global_B.w;
+            Bs[share_row * (BN + 1) + share_col] = global_B.x;
+            Bs[share_row * (BN + 1) + share_col + 1] = global_B.y;
+            Bs[share_row * (BN + 1) + share_col + 2] = global_B.z;
+            Bs[share_row * (BN + 1) + share_col + 3] = global_B.w;
         }
         __syncthreads();
 #pragma unroll
@@ -418,12 +418,12 @@ __global__ void sgemm_warp_tiling(
 // Load As to register.
 #pragma unroll
             for (int ki = 0; ki < TM; ki++) {
-                regA[ki] = As[(warp_row_in_block + lane_row_in_warp + ki) + kt * BM];
+                regA[ki] = As[(warp_row_in_block + lane_row_in_warp + ki) * (BK + 1) + kt];
             }
 // Load Bs to register.
 #pragma unroll
-            for (int ki = 0; ki < TN; ki++) {
-                regB[ki] = Bs[kt * BN + (warp_col_in_block + lane_col_in_warp + ki)];
+            for (int ki = 0; ki < TN; ki += 4) {
+                regB[ki] = Bs[kt * (BN + 1) + (warp_col_in_block + lane_col_in_warp + ki)];
             }
 // Now we Calculate and store in sum.
 #pragma unroll
