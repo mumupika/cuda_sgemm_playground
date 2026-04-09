@@ -47,6 +47,7 @@ void launch_sgemm_naive(
     size_t sharedMemSize, cudaStream_t stream) {
     /// Get the kernel.
     sgemm_naive<<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, ldA, ldB, ldC, alpha, A, B, beta, C);
+    CUDA_CHECK(cudaGetLastError());
 }
 
 /**
@@ -80,6 +81,7 @@ void launch_sgemm_coalescing(
     dim3 gridDim, dim3 blockDim,
     size_t sharedMemSize, cudaStream_t stream) {
     sgemm_coalescing<<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, ldA, ldB, ldC, alpha, A, B, beta, C);
+    CUDA_CHECK(cudaGetLastError());
 }
 
 /**
@@ -114,6 +116,7 @@ void launch_sgemm_coalescing2(
     dim3 gridDim, dim3 blockDim, int const blockSize,
     size_t sharedMemSize, cudaStream_t stream) {
     sgemm_coalescing2<<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, ldA, ldB, ldC, alpha, A, B, beta, C, blockSize);
+    CUDA_CHECK(cudaGetLastError());
 }
 
 __global__ void sgemm_smem(
@@ -172,6 +175,7 @@ void launch_sgemm_smem(
     dim3 gridDim, dim3 blockDim,
     size_t sharedMemSize, cudaStream_t stream) {
     sgemm_smem<<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, ldA, ldB, ldC, alpha, A, B, beta, C);
+    CUDA_CHECK(cudaGetLastError());
 }
 
 __global__ void sgemm_smem_opt(
@@ -231,6 +235,7 @@ void launch_sgemm_smem_opt(
     dim3 gridDim, dim3 blockDim, int const tileSize,
     size_t sharedMemSize, cudaStream_t stream) {
     sgemm_smem_opt<<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, ldA, ldB, ldC, alpha, A, B, beta, C, tileSize);
+    CUDA_CHECK(cudaGetLastError());
 }
 
 cublasStatus_t CublasLauncher(
