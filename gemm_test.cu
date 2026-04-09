@@ -11,6 +11,9 @@
  *
  */
 
+/// C++ headers.
+#include <random>
+
 /// CUDA RUNTIME.
 #include "cuda_runtime.h"
 
@@ -63,19 +66,13 @@ void call_test(
     (testKernel<Is>(M, N, K, hA, hB, hC, alpha, beta, get_kernel_name<Is>().c_str(), check_result_flag), ...);
 }
 
-int main() {
+void start_test() {
     /// Matrix Dimension.
     /// Which means: A (M, K) @ B (K, N) * alpha + beta * C (M, N);
     int M = 1777;
     int N = 817;
     int K = 973;
     bool check_result_flag = true;
-
-    /// Get the device properties.
-    GetProperties();
-
-    /// warm up the cuda.
-    cudaFree(0);
 
     /// host data.
     float *hA;
@@ -101,5 +98,53 @@ int main() {
     std::free(hA);
     std::free(hB);
     std::free(hC);
+}
+
+void start_random_test() {
+    /// Matrix Dimension.
+    /// Which means: A (M, K) @ B (K, N) * alpha + beta * C (M, N);
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dist_int(4, 1024);
+
+    int M = dist_int(gen);
+    int N = dist_int(gen);
+    int K = dist_int(gen);
+    bool check_result_flag = true;
+
+    /// host data.
+    float *hA;
+    float *hB;
+    float *hC;
+
+    /// malloc hA, hB, hC.
+    hA = static_cast<float *>(std::malloc(sizeof(float) * M * K));
+    hB = static_cast<float *>(std::malloc(sizeof(float) * K * N));
+    hC = static_cast<float *>(std::malloc(sizeof(float) * M * N));
+
+    /// Bias.
+    float alpha;
+    float beta;
+
+    prepare_matrix(M, N, K, hA, hB, hC, alpha, beta);
+
+    printf("M = %d, K = %d, N = %d Kernel test:\n", M, K, N);
+
+    call_test(M, N, K, hA, hB, hC, alpha, beta, check_result_flag, std::make_index_sequence<KERNEL_NUMS + 2>{});
+
+    /// free hA, hB, hC.
+    std::free(hA);
+    std::free(hB);
+    std::free(hC);
+}
+
+int main() {
+    /// Get the device properties.
+    GetProperties();
+    start_test();
+    for (int i = 0; i < 10; i++) {
+        start_random_test();
+    }
     return 0;
 }

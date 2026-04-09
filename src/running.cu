@@ -220,8 +220,8 @@ float run_kernel<7>(
     bool const check_result_flag) {
     memHtoD(M, N, K, ldA, ldB, ldC, hA, hB, hC, dA, dB, dC);
 
-    constexpr int BM = 128;
-    constexpr int BN = 128;
+    constexpr int BM = 64;
+    constexpr int BN = 64;
     constexpr int BK = 32;
     constexpr int TM = 8;
     constexpr int TN = 8;
@@ -259,8 +259,8 @@ float run_kernel<8>(
     bool const check_result_flag) {
     memHtoD(M, N, K, ldA, ldB, ldC, hA, hB, hC, dA, dB, dC);
 
-    constexpr int BM = 128;
-    constexpr int BN = 128;
+    constexpr int BM = 64;
+    constexpr int BN = 64;
     constexpr int BK = 32;
     constexpr int TM = 8;
     constexpr int TN = 8;
@@ -277,6 +277,88 @@ float run_kernel<8>(
     time.stop();
 
     printf("Kernel 8: GPU executed elapsed: %f ms\n", time.elapsed_millis());
+
+    /// Check the data's correctivity.
+    if (check_result_flag) {
+        printf("==========================================================\n");
+        printf("Check with cublas result enabled. Checking...\n");
+        check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
+        printf("==========================================================\n");
+    }
+    return time.elapsed_millis();
+}
+
+template <>
+float run_kernel<9>(
+    int const M, int const N, int const K,
+    int const ldA, int const ldB, int const ldC,
+    float *hA, float *hB, float *hC,
+    float *dA, float *dB, float *dC,
+    float const alpha, float const beta,
+    bool const check_result_flag) {
+    memHtoD(M, N, K, ldA, ldB, ldC, hA, hB, hC, dA, dB, dC);
+
+    constexpr int BM = 64;
+    constexpr int BN = 64;
+    constexpr int BK = 32;
+    constexpr int WM = 32;
+    constexpr int WN = 32;
+    constexpr int TM = 8;
+    constexpr int TN = 4;
+
+    /// Create blocks and grids to map the datas for calculation.
+    dim3 gridDim(CEIL_DIV(N, BN), CEIL_DIV(M, BM), 1);
+    dim3 blockDim(BN / TN, BM / TM);
+
+    /// launch the kernel from launcher.
+    GpuTimer time{};
+    time.start();
+    size_t sharedMemSize = sizeof(float) * (BM * (BK + 1) + BK * BN);
+    launch_sgemm_warp_tiling<BM, BN, BK, WM, WN, TM, TN>(M, N, K, ldA, ldB, ldC, dA, dB, dC, alpha, beta, gridDim, blockDim, sharedMemSize);
+    time.stop();
+
+    printf("Kernel 9: GPU executed elapsed: %f ms\n", time.elapsed_millis());
+
+    /// Check the data's correctivity.
+    if (check_result_flag) {
+        printf("==========================================================\n");
+        printf("Check with cublas result enabled. Checking...\n");
+        check_cublas_result(M, N, K, hA, hB, hC, dC, alpha, beta);
+        printf("==========================================================\n");
+    }
+    return time.elapsed_millis();
+}
+
+template <>
+float run_kernel<10>(
+    int const M, int const N, int const K,
+    int const ldA, int const ldB, int const ldC,
+    float *hA, float *hB, float *hC,
+    float *dA, float *dB, float *dC,
+    float const alpha, float const beta,
+    bool const check_result_flag) {
+    memHtoD(M, N, K, ldA, ldB, ldC, hA, hB, hC, dA, dB, dC);
+
+    constexpr int BM = 64;
+    constexpr int BN = 64;
+    constexpr int BK = 32;
+    constexpr int WM = 32;
+    constexpr int WN = 32;
+    constexpr int TM = 8;
+    constexpr int TN = 4;
+
+    /// Create blocks and grids to map the datas for calculation.
+    dim3 gridDim(CEIL_DIV(N, BN), CEIL_DIV(M, BM), 1);
+    dim3 blockDim(BN / TN, BM / TM);
+
+    /// launch the kernel from launcher.
+    GpuTimer time{};
+    time.start();
+    size_t sharedMemSize = sizeof(float) * (BM * BK + BK * BN);
+    launch_sgemm_warp_tiling_swizzle<BM, BN, BK, WM, WN, TM, TN>(M, N, K, ldA, ldB, ldC, dA, dB, dC, alpha, beta, gridDim, blockDim, sharedMemSize);
+    time.stop();
+
+    printf("Kernel 10: GPU executed elapsed: %f ms\n", time.elapsed_millis());
 
     /// Check the data's correctivity.
     if (check_result_flag) {
