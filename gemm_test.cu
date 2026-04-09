@@ -74,12 +74,6 @@ void start_test() {
     int K = 973;
     bool check_result_flag = true;
 
-    /// Get the device properties.
-    GetProperties();
-
-    /// warm up the cuda.
-    cudaFree(0);
-
     /// host data.
     float *hA;
     float *hB;
@@ -119,12 +113,6 @@ void start_random_test() {
     int K = dist_int(gen);
     bool check_result_flag = true;
 
-    /// Get the device properties.
-    GetProperties();
-
-    /// warm up the cuda.
-    cudaFree(0);
-
     /// host data.
     float *hA;
     float *hB;
@@ -152,6 +140,8 @@ void start_random_test() {
 }
 
 int main() {
+    /// Get the device properties.
+    GetProperties();
     start_test();
     for (int i = 0; i < 10; i++) {
         start_random_test();

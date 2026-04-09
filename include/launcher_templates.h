@@ -355,7 +355,7 @@ __global__ void sgemm_warp_tiling(
     float beta, float *C) {
     extern __shared__ float smem[];
     float *As = smem;
-    float *Bs = &smem[BM * (BK + 4)];
+    float *Bs = &smem[BM * (BK + 1)];
 
     // We should calculate the base address for all hierarchies.
     // First the block. From execute model -> memory model.
