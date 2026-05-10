@@ -472,7 +472,7 @@ void launch_sgemm_warp_tiling(
 }
 
 template <int BM, int BN, int BK, int WM, int WN, int TM, int TN>
-__global__ void sgemm_warp_tiling_swizzle(
+__global__ void __launch_bounds__(256, 2) sgemm_warp_tiling_swizzle(
     int M, int N, int K,
     int ldA, int ldB, int ldC,
     float alpha,
@@ -596,7 +596,7 @@ void launch_sgemm_warp_tiling_swizzle(
 }
 
 template <int BM, int BN, int BK, int WM, int WN, int TM, int TN>
-__global__ void sgemm_dbo_warp_tiling_swizzle(
+__global__ void __launch_bounds__(256, 2) sgemm_dbo_warp_tiling_swizzle(
     int M, int N, int K,
     int ldA, int ldB, int ldC,
     float alpha,

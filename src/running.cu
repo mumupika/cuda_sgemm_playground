@@ -339,13 +339,13 @@ float run_kernel<10>(
     bool const check_result_flag) {
     memHtoD(M, N, K, ldA, ldB, ldC, hA, hB, hC, dA, dB, dC);
 
-    constexpr int BM = 64;
-    constexpr int BN = 64;
-    constexpr int BK = 32;
-    constexpr int WM = 32;
+    constexpr int BM = 128;
+    constexpr int BN = 128;
+    constexpr int BK = 16;
+    constexpr int WM = 64;
     constexpr int WN = 32;
     constexpr int TM = 8;
-    constexpr int TN = 4;
+    constexpr int TN = 8;
 
     /// Create blocks and grids to map the datas for calculation.
     dim3 gridDim(CEIL_DIV(N, BN), CEIL_DIV(M, BM), 1);
@@ -384,8 +384,8 @@ float run_kernel<11>(
     constexpr int BN = 128;
     constexpr int BK = 16;
     constexpr int WM = 64;
-    constexpr int WN = 64;
-    constexpr int TM = 16;
+    constexpr int WN = 32;
+    constexpr int TM = 8;
     constexpr int TN = 8;
 
     /// Create blocks and grids to map the datas for calculation.
