@@ -85,7 +85,7 @@ int main() {
 
     printf("M = %d, K = %d, N = %d Kernel test:\n", M, K, N);
 
-    constexpr int kernelId = 10;
+    constexpr int kernelId = 11;
     testKernel<kernelId>(M, N, K, hA, hB, hC, alpha, beta, get_kernel_name<kernelId>().c_str(), check_result_flag);
 
     /// free hA, hB, hC.

@@ -471,7 +471,6 @@ void launch_sgemm_warp_tiling(
     CUDA_CHECK(cudaGetLastError());
 }
 
-
 template <int BM, int BN, int BK, int WM, int WN, int TM, int TN>
 __global__ void sgemm_warp_tiling_swizzle(
     int M, int N, int K,
@@ -593,5 +592,189 @@ void launch_sgemm_warp_tiling_swizzle(
     dim3 gridDim, dim3 blockDim,
     size_t sharedMemSize = 0, cudaStream_t stream = 0) {
     sgemm_warp_tiling_swizzle<BM, BN, BK, WM, WN, TM, TN><<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, ldA, ldB, ldC, alpha, A, B, beta, C);
+    CUDA_CHECK(cudaGetLastError());
+}
+
+template <int BM, int BN, int BK, int WM, int WN, int TM, int TN>
+__global__ void sgemm_dbo_warp_tiling_swizzle(
+    int M, int N, int K,
+    int ldA, int ldB, int ldC,
+    float alpha,
+    const float *A, const float *B,
+    float beta, float *C) {
+    // Swizzle for bank conflict free.
+    Swizzle<3, 2, 6> swz;
+
+    // Double buffer smem.
+    extern __shared__ float smem[];
+    float *As_buf[2];
+    float *Bs_buf[2];
+    As_buf[0] = smem;
+    As_buf[1] = &smem[BM * BK];
+    Bs_buf[0] = &smem[2 * BM * BK];
+    Bs_buf[1] = &smem[2 * BM * BK + BK * BN];
+
+    // We should calculate the base address for all hierarchies.
+    // First the block. From execute model -> memory model.
+    const int by = blockIdx.y;
+    const int bx = blockIdx.x;
+    // Then the warp.
+    // First we get the thread in the block.
+    const int ty = threadIdx.y; // thread row.
+    const int tx = threadIdx.x; // thread col.
+    const int tid = ty * blockDim.x + tx;
+    const int num_threads = blockDim.x * blockDim.y;
+
+    // Then we can get the warp id.
+    const int warp_id = tid >> 5;
+    const int lane_id = tid & 31;
+    // Get the warp in blocks.
+    const int num_warp_cols = BN / WN;
+    const int warp_idy = warp_id / num_warp_cols;
+    const int warp_idx = warp_id % num_warp_cols;
+    // Get the lane in warp.
+    const int num_lane_cols = WN / TN;
+    const int lane_idy = lane_id / num_lane_cols;
+    const int lane_idx = lane_id % num_lane_cols;
+
+    // The registers file.
+    float regA[TM];
+    float regB[TN];
+    float sum[TM * TN]{0.0};
+
+    // The output related hierarchy.
+    const int block_row = by * BM;
+    const int block_col = bx * BN;
+    const int warp_row_in_block = warp_idy * WM;
+    const int warp_col_in_block = warp_idx * WN;
+    const int lane_row_in_warp = lane_idy * TM;
+    const int lane_col_in_warp = lane_idx * TN;
+
+    // Prologue load -> [load -> compute (dbo)] -> epilogue compute -> store
+    // === Prologue: We need to load A and B here for the first time. ===
+    for (int idx = tid * 4; idx < BM * BK; idx += num_threads * 4) {
+        int share_row = idx / BK;
+        int share_col = idx % BK;
+        int global_row = block_row + share_row;
+        int global_col = share_col;
+        float4 global_A = *reinterpret_cast<const float4 *>(&A[global_row * ldA + global_col]);
+        As_buf[0][swz.GET_SWZ(get_2d_offset<BM>(share_col, share_row))] = global_A.x;
+        As_buf[0][swz.GET_SWZ(get_2d_offset<BM>(share_col + 1, share_row))] = global_A.y;
+        As_buf[0][swz.GET_SWZ(get_2d_offset<BM>(share_col + 2, share_row))] = global_A.z;
+        As_buf[0][swz.GET_SWZ(get_2d_offset<BM>(share_col + 3, share_row))] = global_A.w;
+    }
+    for (int idx = tid * 4; idx < BK * BN; idx += num_threads * 4) {
+        int share_row = idx / BN;
+        int share_col = idx % BN;
+        int global_row = share_row;
+        int global_col = block_col + share_col;
+        float4 global_B = *reinterpret_cast<const float4 *>(&B[global_row * ldB + global_col]);
+        *reinterpret_cast<float4 *>(&Bs_buf[0][share_row * BN + share_col]) = global_B;
+    }
+    __syncthreads();
+    // === Prologue end ===
+
+    // DBO area: load -> compute
+    int cur = 0;
+    for (int kb = BK; kb < K; kb += BK) {
+        int next = 1 - cur;
+        // load part.
+        for (int idx = tid * 4; idx < BM * BK; idx += num_threads * 4) {
+            int share_row = idx / BK;
+            int share_col = idx % BK;
+            int global_row = block_row + share_row;
+            int global_col = kb + share_col;
+            float4 global_A = *reinterpret_cast<const float4 *>(&A[global_row * ldA + global_col]);
+            As_buf[next][swz.GET_SWZ(get_2d_offset<BM>(share_col, share_row))] = global_A.x;
+            As_buf[next][swz.GET_SWZ(get_2d_offset<BM>(share_col + 1, share_row))] = global_A.y;
+            As_buf[next][swz.GET_SWZ(get_2d_offset<BM>(share_col + 2, share_row))] = global_A.z;
+            As_buf[next][swz.GET_SWZ(get_2d_offset<BM>(share_col + 3, share_row))] = global_A.w;
+        }
+        for (int idx = tid * 4; idx < BK * BN; idx += num_threads * 4) {
+            int share_row = idx / BN;
+            int share_col = idx % BN;
+            int global_row = kb + share_row;
+            int global_col = block_col + share_col;
+            float4 global_B = *reinterpret_cast<const float4 *>(&B[global_row * ldB + global_col]);
+            *reinterpret_cast<float4 *>(&Bs_buf[next][share_row * BN + share_col]) = global_B;
+        }
+
+        // compute part.
+#pragma unroll
+        for (int kt = 0; kt < BK; kt++) {
+            int row_A = warp_row_in_block + lane_row_in_warp;
+#pragma unroll
+            for (int ki = 0; ki < TM; ki += 4) {
+                *reinterpret_cast<float4 *>(&regA[ki]) = *reinterpret_cast<const float4 *>(&As_buf[cur][swz.GET_SWZ(get_2d_offset<BM>(kt, row_A + ki))]);
+            }
+            int col_B = warp_col_in_block + lane_col_in_warp;
+#pragma unroll
+            for (int ki = 0; ki < TN; ki += 4) {
+                *reinterpret_cast<float4 *>(&regB[ki]) = *reinterpret_cast<const float4 *>(&Bs_buf[cur][kt * BN + col_B + ki]);
+            }
+// Now we Calculate and store in sum.
+#pragma unroll
+            for (int ki = 0; ki < TM; ki++) {
+#pragma unroll
+                for (int kj = 0; kj < TN; kj++) {
+                    sum[ki * TN + kj] += regA[ki] * regB[kj];
+                }
+            }
+        }
+        __syncthreads();
+        cur = next;
+    }
+
+// Epilogue: last calculation.
+#pragma unroll
+    for (int kt = 0; kt < BK; kt++) {
+        int row_A = warp_row_in_block + lane_row_in_warp;
+#pragma unroll
+        for (int ki = 0; ki < TM; ki += 4) {
+            *reinterpret_cast<float4 *>(&regA[ki]) = *reinterpret_cast<const float4 *>(&As_buf[cur][swz.GET_SWZ(get_2d_offset<BM>(kt, row_A + ki))]);
+        }
+        int col_B = warp_col_in_block + lane_col_in_warp;
+#pragma unroll
+        for (int ki = 0; ki < TN; ki += 4) {
+            *reinterpret_cast<float4 *>(&regB[ki]) = *reinterpret_cast<const float4 *>(&Bs_buf[cur][kt * BN + col_B + ki]);
+        }
+// Now we Calculate and store in sum.
+#pragma unroll
+        for (int ki = 0; ki < TM; ki++) {
+#pragma unroll
+            for (int kj = 0; kj < TN; kj++) {
+                sum[ki * TN + kj] += regA[ki] * regB[kj];
+            }
+        }
+    }
+
+// Store back to C.
+#pragma unroll
+    for (int i = 0; i < TM; i++) {
+        int row = block_row + warp_row_in_block + lane_row_in_warp + i;
+        if (row < M) {
+#pragma unroll
+            for (int j = 0; j < TN; j += 4) {
+                int col = block_col + warp_col_in_block + lane_col_in_warp + j;
+                float4 tempC = *reinterpret_cast<float4 *>(&C[row * ldC + col]);
+                tempC.x = alpha * sum[i * TN + j] + beta * tempC.x;
+                tempC.y = alpha * sum[i * TN + j + 1] + beta * tempC.y;
+                tempC.z = alpha * sum[i * TN + j + 2] + beta * tempC.z;
+                tempC.w = alpha * sum[i * TN + j + 3] + beta * tempC.w;
+                *reinterpret_cast<float4 *>(&C[row * ldC + col]) = tempC;
+            }
+        }
+    }
+}
+
+template <int BM, int BN, int BK, int WM, int WN, int TM, int TN>
+void launch_sgemm_dbo_warp_tiling_swizzle(
+    int M, int N, int K,
+    int ldA, int ldB, int ldC,
+    const float *A, const float *B, float *C,
+    float alpha, float beta,
+    dim3 gridDim, dim3 blockDim,
+    size_t sharedMemSize = 0, cudaStream_t stream = 0) {
+    sgemm_dbo_warp_tiling_swizzle<BM, BN, BK, WM, WN, TM, TN><<<gridDim, blockDim, sharedMemSize, stream>>>(M, N, K, ldA, ldB, ldC, alpha, A, B, beta, C);
     CUDA_CHECK(cudaGetLastError());
 }

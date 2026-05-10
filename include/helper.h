@@ -148,6 +148,6 @@ struct Swizzle {
  * @brief Get the 2d offset with the width as matrix width.
  */
 template <int Width>
-__device__ int get_2d_offset(int col, int row) {
-    return col * Width + row;
+__device__ int get_2d_offset(int row, int col) {
+    return row * Width + col;
 }
