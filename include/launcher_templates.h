@@ -480,7 +480,7 @@ __global__ void sgemm_warp_tiling_swizzle(
     const float *A, const float *B,
     float beta, float *C) {
     // swizzle Calculation. #define GET_A(col, row) ((col) * BM + ((row) ^ ((col) & ~3)))
-    Swizzle<3, 2, 7> swz;
+    Swizzle<3, 2, 6> swz;
     // Shared memory Allocation. No padding needed.
     extern __shared__ float smem[];
     float *As = smem;
