@@ -479,7 +479,7 @@ __global__ void __launch_bounds__(256, 2) sgemm_warp_tiling_swizzle(
     const float *A, const float *B,
     float beta, float *C) {
     // swizzle Calculation. #define GET_A(col, row) ((col) * BM + ((row) ^ ((col) & ~3)))
-    Swizzle<3, 2, 6> swz;
+    Swizzle<3, 2, 7> swz;
     // Shared memory Allocation. No padding needed.
     extern __shared__ float smem[];
     float *As = smem;
@@ -603,7 +603,7 @@ __global__ void __launch_bounds__(256, 2) sgemm_dbo_warp_tiling_swizzle(
     const float *A, const float *B,
     float beta, float *C) {
     // Swizzle for bank conflict free.
-    Swizzle<3, 2, 6> swz;
+    Swizzle<3, 2, 7> swz;
 
     // Double buffer smem.
     extern __shared__ float smem[];
@@ -638,8 +638,8 @@ __global__ void __launch_bounds__(256, 2) sgemm_dbo_warp_tiling_swizzle(
     const int lane_idx = lane_id % num_lane_cols;
 
     // The registers file.
-    float regA[TM];
-    float regB[TN];
+    float regA[2][TM];
+    float regB[2][TN];
     float sum[TM * TN]{0.0};
 
     // The output related hierarchy.
@@ -652,16 +652,17 @@ __global__ void __launch_bounds__(256, 2) sgemm_dbo_warp_tiling_swizzle(
 
     // Prologue load -> [load -> compute (dbo)] -> epilogue compute -> store
     // === Prologue: We need to load A and B here for the first time. ===
+    int cur_smem = 0;
     for (int idx = tid * 4; idx < BM * BK; idx += num_threads * 4) {
         int share_row = idx / BK;
         int share_col = idx % BK;
         int global_row = block_row + share_row;
         int global_col = share_col;
         float4 global_A = *reinterpret_cast<const float4 *>(&A[global_row * ldA + global_col]);
-        As_buf[0][swz.GET_SWZ(get_2d_offset<BM>(share_col, share_row))] = global_A.x;
-        As_buf[0][swz.GET_SWZ(get_2d_offset<BM>(share_col + 1, share_row))] = global_A.y;
-        As_buf[0][swz.GET_SWZ(get_2d_offset<BM>(share_col + 2, share_row))] = global_A.z;
-        As_buf[0][swz.GET_SWZ(get_2d_offset<BM>(share_col + 3, share_row))] = global_A.w;
+        As_buf[cur_smem][swz.GET_SWZ(get_2d_offset<BM>(share_col, share_row))] = global_A.x;
+        As_buf[cur_smem][swz.GET_SWZ(get_2d_offset<BM>(share_col + 1, share_row))] = global_A.y;
+        As_buf[cur_smem][swz.GET_SWZ(get_2d_offset<BM>(share_col + 2, share_row))] = global_A.z;
+        As_buf[cur_smem][swz.GET_SWZ(get_2d_offset<BM>(share_col + 3, share_row))] = global_A.w;
     }
     for (int idx = tid * 4; idx < BK * BN; idx += num_threads * 4) {
         int share_row = idx / BN;
@@ -669,15 +670,14 @@ __global__ void __launch_bounds__(256, 2) sgemm_dbo_warp_tiling_swizzle(
         int global_row = share_row;
         int global_col = block_col + share_col;
         float4 global_B = *reinterpret_cast<const float4 *>(&B[global_row * ldB + global_col]);
-        *reinterpret_cast<float4 *>(&Bs_buf[0][share_row * BN + share_col]) = global_B;
+        *reinterpret_cast<float4 *>(&Bs_buf[cur_smem][share_row * BN + share_col]) = global_B;
     }
     __syncthreads();
     // === Prologue end ===
 
-    // DBO area: load -> compute
-    int cur = 0;
+    // === smem DBO area: load -> compute ===
     for (int kb = BK; kb < K; kb += BK) {
-        int next = 1 - cur;
+        int next_smem = 1 - cur_smem;
         // load part.
         for (int idx = tid * 4; idx < BM * BK; idx += num_threads * 4) {
             int share_row = idx / BK;
@@ -685,10 +685,10 @@ __global__ void __launch_bounds__(256, 2) sgemm_dbo_warp_tiling_swizzle(
             int global_row = block_row + share_row;
             int global_col = kb + share_col;
             float4 global_A = *reinterpret_cast<const float4 *>(&A[global_row * ldA + global_col]);
-            As_buf[next][swz.GET_SWZ(get_2d_offset<BM>(share_col, share_row))] = global_A.x;
-            As_buf[next][swz.GET_SWZ(get_2d_offset<BM>(share_col + 1, share_row))] = global_A.y;
-            As_buf[next][swz.GET_SWZ(get_2d_offset<BM>(share_col + 2, share_row))] = global_A.z;
-            As_buf[next][swz.GET_SWZ(get_2d_offset<BM>(share_col + 3, share_row))] = global_A.w;
+            As_buf[next_smem][swz.GET_SWZ(get_2d_offset<BM>(share_col, share_row))] = global_A.x;
+            As_buf[next_smem][swz.GET_SWZ(get_2d_offset<BM>(share_col + 1, share_row))] = global_A.y;
+            As_buf[next_smem][swz.GET_SWZ(get_2d_offset<BM>(share_col + 2, share_row))] = global_A.z;
+            As_buf[next_smem][swz.GET_SWZ(get_2d_offset<BM>(share_col + 3, share_row))] = global_A.w;
         }
         for (int idx = tid * 4; idx < BK * BN; idx += num_threads * 4) {
             int share_row = idx / BN;
@@ -696,57 +696,108 @@ __global__ void __launch_bounds__(256, 2) sgemm_dbo_warp_tiling_swizzle(
             int global_row = kb + share_row;
             int global_col = block_col + share_col;
             float4 global_B = *reinterpret_cast<const float4 *>(&B[global_row * ldB + global_col]);
-            *reinterpret_cast<float4 *>(&Bs_buf[next][share_row * BN + share_col]) = global_B;
+            *reinterpret_cast<float4 *>(&Bs_buf[next_smem][share_row * BN + share_col]) = global_B;
         }
-
-        // compute part.
+        // ===== Prologue reg file =====
+        int cur_reg = 0;
+        int row_A = warp_row_in_block + lane_row_in_warp;
 #pragma unroll
-        for (int kt = 0; kt < BK; kt++) {
+        for (int ki = 0; ki < TM; ki += 4) {
+            *reinterpret_cast<float4 *>(&regA[cur_reg][ki]) = *reinterpret_cast<const float4 *>(&As_buf[cur_smem][swz.GET_SWZ(get_2d_offset<BM>(0, row_A + ki))]);
+        }
+        int col_B = warp_col_in_block + lane_col_in_warp;
+#pragma unroll
+        for (int ki = 0; ki < TN; ki += 4) {
+            *reinterpret_cast<float4 *>(&regB[cur_reg][ki]) = *reinterpret_cast<const float4 *>(&Bs_buf[cur_smem][col_B + ki]);
+        }
+        // ===== Prologue end =====
+        // ===== load register dbo.
+#pragma unroll
+        for (int kt = 1; kt < BK; kt++) {
+            int next_reg = 1 - cur_reg;
             int row_A = warp_row_in_block + lane_row_in_warp;
 #pragma unroll
             for (int ki = 0; ki < TM; ki += 4) {
-                *reinterpret_cast<float4 *>(&regA[ki]) = *reinterpret_cast<const float4 *>(&As_buf[cur][swz.GET_SWZ(get_2d_offset<BM>(kt, row_A + ki))]);
+                *reinterpret_cast<float4 *>(&regA[next_reg][ki]) = *reinterpret_cast<const float4 *>(&As_buf[cur_smem][swz.GET_SWZ(get_2d_offset<BM>(kt, row_A + ki))]);
             }
             int col_B = warp_col_in_block + lane_col_in_warp;
 #pragma unroll
             for (int ki = 0; ki < TN; ki += 4) {
-                *reinterpret_cast<float4 *>(&regB[ki]) = *reinterpret_cast<const float4 *>(&Bs_buf[cur][kt * BN + col_B + ki]);
+                *reinterpret_cast<float4 *>(&regB[next_reg][ki]) = *reinterpret_cast<const float4 *>(&Bs_buf[cur_smem][kt * BN + col_B + ki]);
             }
 // Now we Calculate and store in sum.
 #pragma unroll
             for (int ki = 0; ki < TM; ki++) {
 #pragma unroll
                 for (int kj = 0; kj < TN; kj++) {
-                    sum[ki * TN + kj] += regA[ki] * regB[kj];
+                    sum[ki * TN + kj] += regA[cur_reg][ki] * regB[cur_reg][kj];
                 }
             }
+            cur_reg = next_reg;
         }
-        __syncthreads();
-        cur = next;
-    }
-
-// Epilogue: last calculation.
-#pragma unroll
-    for (int kt = 0; kt < BK; kt++) {
-        int row_A = warp_row_in_block + lane_row_in_warp;
-#pragma unroll
-        for (int ki = 0; ki < TM; ki += 4) {
-            *reinterpret_cast<float4 *>(&regA[ki]) = *reinterpret_cast<const float4 *>(&As_buf[cur][swz.GET_SWZ(get_2d_offset<BM>(kt, row_A + ki))]);
-        }
-        int col_B = warp_col_in_block + lane_col_in_warp;
-#pragma unroll
-        for (int ki = 0; ki < TN; ki += 4) {
-            *reinterpret_cast<float4 *>(&regB[ki]) = *reinterpret_cast<const float4 *>(&Bs_buf[cur][kt * BN + col_B + ki]);
-        }
-// Now we Calculate and store in sum.
+        // ===== end register dbo.
+        // ===== epilogue: register. =====
 #pragma unroll
         for (int ki = 0; ki < TM; ki++) {
 #pragma unroll
             for (int kj = 0; kj < TN; kj++) {
-                sum[ki * TN + kj] += regA[ki] * regB[kj];
+                sum[ki * TN + kj] += regA[cur_reg][ki] * regB[cur_reg][kj];
             }
         }
+        // ===== epilogue end
+        __syncthreads();
+        cur_smem = next_smem;
     }
+    // === smem DBO end ===
+
+    // === epilogue smem.
+    // ===== Prologue reg file =====
+    int cur_reg = 0;
+    int row_A = warp_row_in_block + lane_row_in_warp;
+#pragma unroll
+    for (int ki = 0; ki < TM; ki += 4) {
+        *reinterpret_cast<float4 *>(&regA[cur_reg][ki]) = *reinterpret_cast<const float4 *>(&As_buf[cur_smem][swz.GET_SWZ(get_2d_offset<BM>(0, row_A + ki))]);
+    }
+    int col_B = warp_col_in_block + lane_col_in_warp;
+#pragma unroll
+    for (int ki = 0; ki < TN; ki += 4) {
+        *reinterpret_cast<float4 *>(&regB[cur_reg][ki]) = *reinterpret_cast<const float4 *>(&Bs_buf[cur_smem][col_B + ki]);
+    }
+    // ===== Prologue end =====
+    // ===== register DBO =====
+#pragma unroll
+    for (int kt = 1; kt < BK; kt++) {
+        int next_reg = 1 - cur_reg;
+        int row_A = warp_row_in_block + lane_row_in_warp;
+#pragma unroll
+        for (int ki = 0; ki < TM; ki += 4) {
+            *reinterpret_cast<float4 *>(&regA[next_reg][ki]) = *reinterpret_cast<const float4 *>(&As_buf[cur_smem][swz.GET_SWZ(get_2d_offset<BM>(kt, row_A + ki))]);
+        }
+        int col_B = warp_col_in_block + lane_col_in_warp;
+#pragma unroll
+        for (int ki = 0; ki < TN; ki += 4) {
+            *reinterpret_cast<float4 *>(&regB[next_reg][ki]) = *reinterpret_cast<const float4 *>(&Bs_buf[cur_smem][kt * BN + col_B + ki]);
+        }
+        // Now we Calculate and store in sum.
+#pragma unroll
+        for (int ki = 0; ki < TM; ki++) {
+#pragma unroll
+            for (int kj = 0; kj < TN; kj++) {
+                sum[ki * TN + kj] += regA[cur_reg][ki] * regB[cur_reg][kj];
+            }
+        }
+        cur_reg = next_reg;
+    }
+    // ===== register DBO end =====
+    // ===== epilogue: reg file =====
+#pragma unroll
+    for (int ki = 0; ki < TM; ki++) {
+#pragma unroll
+        for (int kj = 0; kj < TN; kj++) {
+            sum[ki * TN + kj] += regA[cur_reg][ki] * regB[cur_reg][kj];
+        }
+    }
+    // ===== epilogue end =====
 
 // Store back to C.
 #pragma unroll
