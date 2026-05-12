@@ -596,36 +596,52 @@ void launch_sgemm_warp_tiling_swizzle(
 }
 
 template <int BM, int BN, int BK, int WM, int WN, int TM, int TN>
-__global__ void __launch_bounds__(256, 2) sgemm_dbo_warp_tiling_swizzle(
-    int M, int N, int K,
-    int ldA, int ldB, int ldC,
-    float alpha,
-    const float *A, const float *B,
-    float beta, float *C) {
-    // Swizzle for bank conflict free.
-    Swizzle<3, 2, 7> swz;
+__device__ void load_gmem_to_smem(
+    const int smem, const int kb,
+    const int ldA, const int ldB,
+    float **As_buf, float **Bs_buf,
+    const float *A, const float *B) {
+    // Swizzle<3, 2, 6> swz;
+    #define GET_OFFSET(rown, row, col) (row) * (rown) + (col)
+    #define GET_SWZ(num) ((((num) >> 9) << 2) ^ (num))
 
-    // Double buffer smem.
-    extern __shared__ float smem[];
-    float *As_buf[2];
-    float *Bs_buf[2];
-    As_buf[0] = smem;
-    As_buf[1] = &smem[BM * BK];
-    Bs_buf[0] = &smem[2 * BM * BK];
-    Bs_buf[1] = &smem[2 * BM * BK + BK * BN];
-
-    // We should calculate the base address for all hierarchies.
-    // First the block. From execute model -> memory model.
-    const int by = blockIdx.y;
-    const int bx = blockIdx.x;
-    // Then the warp.
-    // First we get the thread in the block.
-    const int ty = threadIdx.y; // thread row.
-    const int tx = threadIdx.x; // thread col.
-    const int tid = ty * blockDim.x + tx;
+    const int tid = threadIdx.y * blockDim.x + threadIdx.x;
     const int num_threads = blockDim.x * blockDim.y;
+    const int block_row = blockIdx.y * BM;
+    const int block_col = blockIdx.x * BN;
+    
+    #pragma unroll
+    for (int idx = tid * 4; idx < BM * BK; idx += num_threads * 4) {
+        int share_row = idx / BK;
+        int share_col = idx % BK;
+        int global_row = block_row + share_row;
+        int global_col = kb + share_col;
+        float4 global_A = __ldg(reinterpret_cast<const float4 *>(&A[global_row * ldA + global_col]));
+        As_buf[smem][GET_SWZ(GET_OFFSET(BM, share_col, share_row))] = global_A.x;
+        As_buf[smem][GET_SWZ(GET_OFFSET(BM, share_col + 1, share_row))] = global_A.y;
+        As_buf[smem][GET_SWZ(GET_OFFSET(BM, share_col + 2, share_row))] = global_A.z;
+        As_buf[smem][GET_SWZ(GET_OFFSET(BM, share_col + 3, share_row))] = global_A.w;
+    }
+    #pragma unroll
+    for (int idx = tid * 4; idx < BK * BN; idx += num_threads * 4) {
+        int share_row = idx / BN;
+        int share_col = idx % BN;
+        int global_row = kb + share_row;
+        int global_col = block_col + share_col;
+        *reinterpret_cast<float4 *>(&Bs_buf[smem][share_row * BN + share_col]) =  __ldg(reinterpret_cast<const float4 *>(&B[global_row * ldB + global_col]));
+    }
+}
 
-    // Then we can get the warp id.
+template <int BM, int BN, int BK, int WM, int WN, int TM, int TN>
+__device__ void load_smem_to_reg(
+    const int reg, const int smem, const int kt,
+    float (*regA)[TM], float **As_buf,
+    float (*regB)[TN], float **Bs_buf) {
+    // Swizzle<3, 2, 6> swz;
+    #define GET_OFFSET(rown, row, col) (row) * (rown) + (col)
+    #define GET_SWZ(num) ((((num) >> 9) << 2) ^ (num))
+
+    const int tid = threadIdx.y * blockDim.x + threadIdx.x;
     const int warp_id = tid >> 5;
     const int lane_id = tid & 31;
     // Get the warp in blocks.
@@ -637,169 +653,60 @@ __global__ void __launch_bounds__(256, 2) sgemm_dbo_warp_tiling_swizzle(
     const int lane_idy = lane_id / num_lane_cols;
     const int lane_idx = lane_id % num_lane_cols;
 
-    // The registers file.
-    float regA[2][TM];
-    float regB[2][TN];
-    float sum[TM * TN]{0.0};
-
-    // The output related hierarchy.
-    const int block_row = by * BM;
-    const int block_col = bx * BN;
     const int warp_row_in_block = warp_idy * WM;
     const int warp_col_in_block = warp_idx * WN;
     const int lane_row_in_warp = lane_idy * TM;
     const int lane_col_in_warp = lane_idx * TN;
 
-    // Prologue load -> [load -> compute (dbo)] -> epilogue compute -> store
-    // === Prologue: We need to load A and B here for the first time. ===
-    int cur_smem = 0;
-    for (int idx = tid * 4; idx < BM * BK; idx += num_threads * 4) {
-        int share_row = idx / BK;
-        int share_col = idx % BK;
-        int global_row = block_row + share_row;
-        int global_col = share_col;
-        float4 global_A = *reinterpret_cast<const float4 *>(&A[global_row * ldA + global_col]);
-        As_buf[cur_smem][swz.GET_SWZ(get_2d_offset<BM>(share_col, share_row))] = global_A.x;
-        As_buf[cur_smem][swz.GET_SWZ(get_2d_offset<BM>(share_col + 1, share_row))] = global_A.y;
-        As_buf[cur_smem][swz.GET_SWZ(get_2d_offset<BM>(share_col + 2, share_row))] = global_A.z;
-        As_buf[cur_smem][swz.GET_SWZ(get_2d_offset<BM>(share_col + 3, share_row))] = global_A.w;
-    }
-    for (int idx = tid * 4; idx < BK * BN; idx += num_threads * 4) {
-        int share_row = idx / BN;
-        int share_col = idx % BN;
-        int global_row = share_row;
-        int global_col = block_col + share_col;
-        float4 global_B = *reinterpret_cast<const float4 *>(&B[global_row * ldB + global_col]);
-        *reinterpret_cast<float4 *>(&Bs_buf[cur_smem][share_row * BN + share_col]) = global_B;
-    }
-    __syncthreads();
-    // === Prologue end ===
-
-    // === smem DBO area: load -> compute ===
-    for (int kb = BK; kb < K; kb += BK) {
-        int next_smem = 1 - cur_smem;
-        // load part.
-        for (int idx = tid * 4; idx < BM * BK; idx += num_threads * 4) {
-            int share_row = idx / BK;
-            int share_col = idx % BK;
-            int global_row = block_row + share_row;
-            int global_col = kb + share_col;
-            float4 global_A = *reinterpret_cast<const float4 *>(&A[global_row * ldA + global_col]);
-            As_buf[next_smem][swz.GET_SWZ(get_2d_offset<BM>(share_col, share_row))] = global_A.x;
-            As_buf[next_smem][swz.GET_SWZ(get_2d_offset<BM>(share_col + 1, share_row))] = global_A.y;
-            As_buf[next_smem][swz.GET_SWZ(get_2d_offset<BM>(share_col + 2, share_row))] = global_A.z;
-            As_buf[next_smem][swz.GET_SWZ(get_2d_offset<BM>(share_col + 3, share_row))] = global_A.w;
-        }
-        for (int idx = tid * 4; idx < BK * BN; idx += num_threads * 4) {
-            int share_row = idx / BN;
-            int share_col = idx % BN;
-            int global_row = kb + share_row;
-            int global_col = block_col + share_col;
-            float4 global_B = *reinterpret_cast<const float4 *>(&B[global_row * ldB + global_col]);
-            *reinterpret_cast<float4 *>(&Bs_buf[next_smem][share_row * BN + share_col]) = global_B;
-        }
-        // ===== Prologue reg file =====
-        int cur_reg = 0;
-        int row_A = warp_row_in_block + lane_row_in_warp;
-#pragma unroll
-        for (int ki = 0; ki < TM; ki += 4) {
-            *reinterpret_cast<float4 *>(&regA[cur_reg][ki]) = *reinterpret_cast<const float4 *>(&As_buf[cur_smem][swz.GET_SWZ(get_2d_offset<BM>(0, row_A + ki))]);
-        }
-        int col_B = warp_col_in_block + lane_col_in_warp;
-#pragma unroll
-        for (int ki = 0; ki < TN; ki += 4) {
-            *reinterpret_cast<float4 *>(&regB[cur_reg][ki]) = *reinterpret_cast<const float4 *>(&Bs_buf[cur_smem][col_B + ki]);
-        }
-        // ===== Prologue end =====
-        // ===== load register dbo.
-#pragma unroll
-        for (int kt = 1; kt < BK; kt++) {
-            int next_reg = 1 - cur_reg;
-            int row_A = warp_row_in_block + lane_row_in_warp;
-#pragma unroll
-            for (int ki = 0; ki < TM; ki += 4) {
-                *reinterpret_cast<float4 *>(&regA[next_reg][ki]) = *reinterpret_cast<const float4 *>(&As_buf[cur_smem][swz.GET_SWZ(get_2d_offset<BM>(kt, row_A + ki))]);
-            }
-            int col_B = warp_col_in_block + lane_col_in_warp;
-#pragma unroll
-            for (int ki = 0; ki < TN; ki += 4) {
-                *reinterpret_cast<float4 *>(&regB[next_reg][ki]) = *reinterpret_cast<const float4 *>(&Bs_buf[cur_smem][kt * BN + col_B + ki]);
-            }
-// Now we Calculate and store in sum.
-#pragma unroll
-            for (int ki = 0; ki < TM; ki++) {
-#pragma unroll
-                for (int kj = 0; kj < TN; kj++) {
-                    sum[ki * TN + kj] += regA[cur_reg][ki] * regB[cur_reg][kj];
-                }
-            }
-            cur_reg = next_reg;
-        }
-        // ===== end register dbo.
-        // ===== epilogue: register. =====
-#pragma unroll
-        for (int ki = 0; ki < TM; ki++) {
-#pragma unroll
-            for (int kj = 0; kj < TN; kj++) {
-                sum[ki * TN + kj] += regA[cur_reg][ki] * regB[cur_reg][kj];
-            }
-        }
-        // ===== epilogue end
-        __syncthreads();
-        cur_smem = next_smem;
-    }
-    // === smem DBO end ===
-
-    // === epilogue smem.
-    // ===== Prologue reg file =====
-    int cur_reg = 0;
     int row_A = warp_row_in_block + lane_row_in_warp;
 #pragma unroll
     for (int ki = 0; ki < TM; ki += 4) {
-        *reinterpret_cast<float4 *>(&regA[cur_reg][ki]) = *reinterpret_cast<const float4 *>(&As_buf[cur_smem][swz.GET_SWZ(get_2d_offset<BM>(0, row_A + ki))]);
+        *reinterpret_cast<float4 *>(&regA[reg][ki]) = *reinterpret_cast<const float4 *>(&As_buf[smem][GET_SWZ(GET_OFFSET(BM, kt, row_A + ki))]);
     }
     int col_B = warp_col_in_block + lane_col_in_warp;
 #pragma unroll
     for (int ki = 0; ki < TN; ki += 4) {
-        *reinterpret_cast<float4 *>(&regB[cur_reg][ki]) = *reinterpret_cast<const float4 *>(&Bs_buf[cur_smem][col_B + ki]);
+        *reinterpret_cast<float4 *>(&regB[reg][ki]) = *reinterpret_cast<const float4 *>(&Bs_buf[smem][kt * BN + col_B + ki]);
     }
-    // ===== Prologue end =====
-    // ===== register DBO =====
-#pragma unroll
-    for (int kt = 1; kt < BK; kt++) {
-        int next_reg = 1 - cur_reg;
-        int row_A = warp_row_in_block + lane_row_in_warp;
-#pragma unroll
-        for (int ki = 0; ki < TM; ki += 4) {
-            *reinterpret_cast<float4 *>(&regA[next_reg][ki]) = *reinterpret_cast<const float4 *>(&As_buf[cur_smem][swz.GET_SWZ(get_2d_offset<BM>(kt, row_A + ki))]);
-        }
-        int col_B = warp_col_in_block + lane_col_in_warp;
-#pragma unroll
-        for (int ki = 0; ki < TN; ki += 4) {
-            *reinterpret_cast<float4 *>(&regB[next_reg][ki]) = *reinterpret_cast<const float4 *>(&Bs_buf[cur_smem][kt * BN + col_B + ki]);
-        }
-        // Now we Calculate and store in sum.
-#pragma unroll
-        for (int ki = 0; ki < TM; ki++) {
-#pragma unroll
-            for (int kj = 0; kj < TN; kj++) {
-                sum[ki * TN + kj] += regA[cur_reg][ki] * regB[cur_reg][kj];
-            }
-        }
-        cur_reg = next_reg;
-    }
-    // ===== register DBO end =====
-    // ===== epilogue: reg file =====
+}
+
+template <int BM, int BN, int BK, int WM, int WN, int TM, int TN>
+__device__ void compute_result(
+    int reg, float *sum, float (*regA)[TM], float (*regB)[TN]) {
 #pragma unroll
     for (int ki = 0; ki < TM; ki++) {
 #pragma unroll
         for (int kj = 0; kj < TN; kj++) {
-            sum[ki * TN + kj] += regA[cur_reg][ki] * regB[cur_reg][kj];
+            sum[ki * TN + kj] += regA[reg][ki] * regB[reg][kj];
         }
     }
-    // ===== epilogue end =====
+}
 
-// Store back to C.
+template <int BM, int BN, int BK, int WM, int WN, int TM, int TN>
+__device__ void store_back_result(
+    const int M, const int ldC,
+    const float alpha, const float beta,
+    float *sum, float *C) {
+    const int block_row = blockIdx.y * BM;
+    const int block_col = blockIdx.x * BN;
+
+    const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+    const int warp_id = tid >> 5;
+    const int lane_id = tid & 31;
+    // Get the warp in blocks.
+    const int num_warp_cols = BN / WN;
+    const int warp_idy = warp_id / num_warp_cols;
+    const int warp_idx = warp_id % num_warp_cols;
+    // Get the lane in warp.
+    const int num_lane_cols = WN / TN;
+    const int lane_idy = lane_id / num_lane_cols;
+    const int lane_idx = lane_id % num_lane_cols;
+
+    const int warp_row_in_block = warp_idy * WM;
+    const int warp_col_in_block = warp_idx * WN;
+    const int lane_row_in_warp = lane_idy * TM;
+    const int lane_col_in_warp = lane_idx * TN;
+
 #pragma unroll
     for (int i = 0; i < TM; i++) {
         int row = block_row + warp_row_in_block + lane_row_in_warp + i;
@@ -816,6 +723,70 @@ __global__ void __launch_bounds__(256, 2) sgemm_dbo_warp_tiling_swizzle(
             }
         }
     }
+}
+
+template <int BM, int BN, int BK, int WM, int WN, int TM, int TN>
+__global__ void __launch_bounds__(256, 2) sgemm_dbo_warp_tiling_swizzle(
+    int M, int N, int K,
+    int ldA, int ldB, int ldC,
+    float alpha,
+    const float *A, const float *B,
+    float beta, float *C) {
+    // Double buffer smem.
+    extern __shared__ float smem[];
+    float *As_buf[2];
+    float *Bs_buf[2];
+    As_buf[0] = smem;
+    As_buf[1] = &smem[BM * BK];
+    Bs_buf[0] = &smem[2 * BM * BK];
+    Bs_buf[1] = &smem[2 * BM * BK + BK * BN];
+
+    // The registers file.
+    float regA[2][TM];
+    float regB[2][TN];
+    float sum[TM * TN]{0.0};
+    
+    // === smem Prologue
+    bool cur_smem = 0;
+    load_gmem_to_smem<BM, BN, BK, WM, WN, TM, TN>(cur_smem, 0, ldA, ldB, As_buf, Bs_buf, A, B);
+    __syncthreads();
+
+    // === smem DBO
+    for (int kb = BK; kb < K; kb += BK) {
+        bool next_smem = !cur_smem;
+        load_gmem_to_smem<BM, BN, BK, WM, WN, TM, TN>(next_smem, kb, ldA, ldB, As_buf, Bs_buf, A, B);
+        
+        // ===== reg prologue.
+        bool cur_reg = 0;
+        load_smem_to_reg<BM, BN, BK, WM, WN, TM, TN>(cur_reg, cur_smem, 0, regA, As_buf, regB, Bs_buf);
+        // ===== reg DBO.
+#pragma unroll
+        for (int kt = 1; kt < BK; kt++) {
+        bool next_reg = !cur_reg;
+            load_smem_to_reg<BM, BN, BK, WM, WN, TM, TN>(next_reg, cur_smem, kt, regA, As_buf, regB, Bs_buf);
+            compute_result<BM, BN, BK, WM, WN, TM, TN>(cur_reg, sum, regA, regB);
+            cur_reg = next_reg;
+        }
+        compute_result<BM, BN, BK, WM, WN, TM, TN>(cur_reg, sum, regA, regB);
+        __syncthreads();
+        cur_smem = next_smem;
+    }
+
+    // === smem epilogue.
+    // ===== reg prologue.
+    bool cur_reg = 0;
+    load_smem_to_reg<BM, BN, BK, WM, WN, TM, TN>(cur_reg, cur_smem, 0, regA, As_buf, regB, Bs_buf);
+    // ===== reg DBO.
+#pragma unroll
+    for (int kt = 1; kt < BK; kt++) {
+        bool next_reg = !cur_reg;
+        load_smem_to_reg<BM, BN, BK, WM, WN, TM, TN>(next_reg, cur_smem, kt, regA, As_buf, regB, Bs_buf);
+        compute_result<BM, BN, BK, WM, WN, TM, TN>(cur_reg, sum, regA, regB);
+        cur_reg = next_reg;
+    }
+    compute_result<BM, BN, BK, WM, WN, TM, TN>(cur_reg, sum, regA, regB);
+    // === write back.
+    store_back_result<BM, BN, BK, WM, WN, TM, TN>(M, ldC, alpha, beta, sum, C);
 }
 
 template <int BM, int BN, int BK, int WM, int WN, int TM, int TN>
