@@ -91,18 +91,18 @@ struct GpuTimer {
 
 /**
  * @brief Self defined functions as constexpr to avoid warning.
- * 
+ *
  */
 namespace helper {
-    template<typename T>
-    __device__ constexpr auto max(T a, T b) {
-        return (a < b ? b : a);
-    }
-    template<typename T>
-    __device__ constexpr auto min(T a, T b) {
-        return (a < b ? a : b);
-    }
+template <typename T>
+__device__ constexpr auto max(T a, T b) {
+    return (a < b ? b : a);
 }
+template <typename T>
+__device__ constexpr auto min(T a, T b) {
+    return (a < b ? a : b);
+}
+} // namespace helper
 
 /**
  * @brief Memory Swizzle for the Bank conflict free implementation.
@@ -116,7 +116,7 @@ namespace helper {
  * 0bxxxxxxxxxxxxxxxxYYxxxxxxxxxZZxxx
  * the result is
  * 0bxxxxxxxxxxxxxxxxYYxxxxxxxxxAAxxx where AA = ZZ xor YY
- * 
+ *
  * Adapted from https://github.com/NVIDIA/cutlass/blob/main/include/cute/swizzle.hpp#L43-L53
  *
  * @tparam B BBits is the number of bits in the mask
@@ -151,3 +151,42 @@ template <int Width>
 __device__ int get_2d_offset(int row, int col) {
     return row * Width + col;
 }
+
+template <int BM, int BN, int BK, int WM, int WN, int TM, int TN>
+__device__ struct RuntimeHelper {
+    static constexpr int num_warp_cols = BN / WN;
+    static constexpr int num_lane_cols = WN / TN;
+
+    const int tid;
+    const int num_threads;
+    const int block_row;
+    const int block_col;
+    const int warp_id;
+    const int lane_id;
+    const int warp_idy;
+    const int warp_idx;
+    const int lane_idy;
+    const int lane_idx;
+    const int warp_row_in_block;
+    const int warp_col_in_block;
+    const int lane_row_in_warp;
+    const int lane_col_in_warp;
+    const int row_A;
+    const int col_B;
+    const int res_row;
+    const int res_col;
+
+    __device__ RuntimeHelper() :
+        tid(threadIdx.y * blockDim.x + threadIdx.x),
+        num_threads(blockDim.x * blockDim.y),
+        block_row(blockIdx.y * BM),
+        block_col(blockIdx.x * BN),
+        warp_id(tid >> 5), lane_id(tid & 31),
+        warp_idy(warp_id / num_warp_cols), warp_idx(warp_id % num_warp_cols),
+        lane_idy(lane_id / num_lane_cols), lane_idx(lane_id % num_lane_cols),
+        warp_row_in_block(warp_idy * WM), warp_col_in_block(warp_idx * WN),
+        lane_row_in_warp(lane_idy * TM), lane_col_in_warp(lane_idx * TN),
+        row_A(warp_row_in_block + lane_row_in_warp), col_B(warp_col_in_block + lane_col_in_warp),
+        res_row(block_row + warp_row_in_block + lane_row_in_warp), res_col(block_col + warp_col_in_block + lane_col_in_warp) {
+    }
+};
