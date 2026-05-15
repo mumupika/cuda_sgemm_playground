@@ -30,28 +30,35 @@ async engine cnt: 2
 =====================================================================
 
 M = 4096, N = 4096, K = 4096
-cublas average elapsed time: 3.162998 ms, Calculate capability: 43452.109839 GFlops/s.
+cublas average elapsed time: 3.157318 ms, Calculate capability: 43530.279814 GFlops/s.
 cutlass average elapsed time: 3.265565 ms, Calculate capability: 42087.345350 GFlops/s.
 
-kernel 1 average elapsed time: 203.515779 ms, Calculate capability: 675.323329 GFlops/s.
-kernel 2 average elapsed time: 25.633101 ms, Calculate capability: 5361.776364 GFlops/s.
-kernel 3 average elapsed time: 26.871325 ms, Calculate capability: 5114.707029 GFlops/s.
-kernel 4 average elapsed time: 28.988717 ms, Calculate capability: 4741.118929 GFlops/s.
-kernel 5 average elapsed time: 29.708227 ms, Calculate capability: 4626.292697 GFlops/s.
-kernel 6 average elapsed time: 7.618234 ms, Calculate capability: 18040.790043 GFlops/s.
-kernel 7 average elapsed time: 4.151139 ms, Calculate capability: 33108.732235 GFlops/s.
-kernel 8 average elapsed time: 3.722685 ms, Calculate capability: 36919.309690 GFlops/s.
-kernel 9 average elapsed time: 3.363171 ms, Calculate capability: 40865.880300 GFlops/s.
+kernel 1 average elapsed time: 203.515141 ms, Calculate capability: 675.325446 GFlops/s.
+kernel 2 average elapsed time: 25.890777 ms, Calculate capability: 5308.413547 GFlops/s.
+kernel 3 average elapsed time: 26.620125 ms, Calculate capability: 5162.971790 GFlops/s.
+kernel 4 average elapsed time: 28.985273 ms, Calculate capability: 4741.682156 GFlops/s.
+kernel 5 average elapsed time: 29.716317 ms, Calculate capability: 4625.033287 GFlops/s.
+kernel 6 average elapsed time: 7.633501 ms, Calculate capability: 18004.708150 GFlops/s.
+kernel 7 average elapsed time: 5.161574 ms, Calculate capability: 26627.331854 GFlops/s.
+kernel 8 average elapsed time: 3.975248 ms, Calculate capability: 34573.680276 GFlops/s.
+kernel 9 average elapsed time: 3.866275 ms, Calculate capability: 35548.155957 GFlops/s.
+kernel 10 average elapsed time: 3.765434 ms, Calculate capability: 36500.166326 GFlops/s.
+kernel 11 average elapsed time: 4.220182 ms, Calculate capability: 32567.064971 GFlops/s.
 ```
 
 ## Roadmaps
 
-- [x] Kernel 1: naive sgemm kernel
-- [x] Kernel 2: gmem coalesced (opt)
-- [x] Kernel 3: one dim gmem coalesced (opt)
-- [x] Kernel 4: static 2-dim smem using (degrade)
-- [x] Kernel 5: dynamic 1-dim smem using (degrade)
-- [x] Kernel 6: increase arithmetic intensity (opt)
-- [x] Kernel 7: padding smem + arithmetic intensity to avoid bank conflict (opt)
-- [x] kernel 8: vectorised loading (opt)
-- [x] Kernel 9: warp tiling (opt).
+✅ Improved
+❌ Degrade
+
+- [x] Kernel 1: naive sgemm kernel (baseline)
+- [x] Kernel 2: gmem coalesced ✅
+- [x] Kernel 3: one dim gmem coalesced ✅
+- [x] Kernel 4: static 2-dim smem using ❌
+- [x] Kernel 5: dynamic 1-dim smem using ❌
+- [x] Kernel 6: increase arithmetic intensity ✅
+- [x] Kernel 7: padding smem + arithmetic intensity to avoid bank conflict ✅
+- [x] kernel 8: vectorised loading. ✅
+- [x] Kernel 9: single warp tiling. ✅
+- [x] Kernel 10: single warp tiling + swizzle with XOR macro. ✅
+- [x] Kernel 11: Double Buffer Optimization. ❌
