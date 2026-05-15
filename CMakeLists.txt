@@ -90,5 +90,6 @@ target_compile_options(components PRIVATE
     $<$<COMPILE_LANGUAGE:CUDA>:
         --expt-relaxed-constexpr
         --expt-extended-lambda
+        -lineinfo
     >
 )
