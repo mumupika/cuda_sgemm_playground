@@ -148,7 +148,7 @@ struct Swizzle {
  * @brief Get the 2d offset with the width as matrix width.
  */
 template <int Width>
-__device__ int get_2d_offset(int row, int col) {
+__device__ __forceinline__ int get_2d_offset(int row, int col) {
     return row * Width + col;
 }
 
@@ -175,8 +175,10 @@ __device__ struct RuntimeHelper {
     const int col_B;
     const int res_row;
     const int res_col;
+    const int lshift; // For ((num >> rshift) << lshift) ^ num;
+    const int rshift;
 
-    __device__ RuntimeHelper() :
+    __device__ RuntimeHelper(int lshift, int rshift) :
         tid(threadIdx.y * blockDim.x + threadIdx.x),
         num_threads(blockDim.x * blockDim.y),
         block_row(blockIdx.y * BM),
@@ -187,6 +189,11 @@ __device__ struct RuntimeHelper {
         warp_row_in_block(warp_idy * WM), warp_col_in_block(warp_idx * WN),
         lane_row_in_warp(lane_idy * TM), lane_col_in_warp(lane_idx * TN),
         row_A(warp_row_in_block + lane_row_in_warp), col_B(warp_col_in_block + lane_col_in_warp),
-        res_row(block_row + warp_row_in_block + lane_row_in_warp), res_col(block_col + warp_col_in_block + lane_col_in_warp) {
+        res_row(block_row + warp_row_in_block + lane_row_in_warp), res_col(block_col + warp_col_in_block + lane_col_in_warp),
+        lshift(lshift), rshift(rshift) {
+    }
+
+    __device__ __forceinline__ int get_swz(int num) {
+        return ((num >> rshift) << lshift) ^ num;
     }
 };

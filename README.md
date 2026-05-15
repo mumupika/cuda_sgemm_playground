@@ -30,20 +30,20 @@ async engine cnt: 2
 =====================================================================
 
 M = 4096, N = 4096, K = 4096
-cublas average elapsed time: 3.146611 ms, Calculate capability: 43678.403915 GFlops/s.
+cublas average elapsed time: 3.157318 ms, Calculate capability: 43530.279814 GFlops/s.
 cutlass average elapsed time: 3.265565 ms, Calculate capability: 42087.345350 GFlops/s.
 
-kernel 1 average elapsed time: 203.514256 ms, Calculate capability: 675.328382 GFlops/s.
-kernel 2 average elapsed time: 25.736381 ms, Calculate capability: 5340.259561 GFlops/s.
-kernel 3 average elapsed time: 26.679219 ms, Calculate capability: 5151.535779 GFlops/s.
-kernel 4 average elapsed time: 28.980531 ms, Calculate capability: 4742.458031 GFlops/s.
-kernel 5 average elapsed time: 29.712617 ms, Calculate capability: 4625.609117 GFlops/s.
-kernel 6 average elapsed time: 7.619616 ms, Calculate capability: 18037.516970 GFlops/s.
-kernel 7 average elapsed time: 5.152272 ms, Calculate capability: 26675.407247 GFlops/s.
-kernel 8 average elapsed time: 3.964093 ms, Calculate capability: 34670.972730 GFlops/s.
-kernel 9 average elapsed time: 3.859088 ms, Calculate capability: 35614.361157 GFlops/s.
-kernel 10 average elapsed time: 3.620208 ms, Calculate capability: 37964.380342 GFlops/s.
-kernel 11 average elapsed time: 4.209661 ms, Calculate capability: 32648.462912 GFlops/s.
+kernel 1 average elapsed time: 203.515141 ms, Calculate capability: 675.325446 GFlops/s.
+kernel 2 average elapsed time: 25.890777 ms, Calculate capability: 5308.413547 GFlops/s.
+kernel 3 average elapsed time: 26.620125 ms, Calculate capability: 5162.971790 GFlops/s.
+kernel 4 average elapsed time: 28.985273 ms, Calculate capability: 4741.682156 GFlops/s.
+kernel 5 average elapsed time: 29.716317 ms, Calculate capability: 4625.033287 GFlops/s.
+kernel 6 average elapsed time: 7.633501 ms, Calculate capability: 18004.708150 GFlops/s.
+kernel 7 average elapsed time: 5.161574 ms, Calculate capability: 26627.331854 GFlops/s.
+kernel 8 average elapsed time: 3.975248 ms, Calculate capability: 34573.680276 GFlops/s.
+kernel 9 average elapsed time: 3.866275 ms, Calculate capability: 35548.155957 GFlops/s.
+kernel 10 average elapsed time: 3.765434 ms, Calculate capability: 36500.166326 GFlops/s.
+kernel 11 average elapsed time: 4.220182 ms, Calculate capability: 32567.064971 GFlops/s.
 ```
 
 ## Roadmaps

@@ -492,7 +492,7 @@ __global__ void __launch_bounds__(256, 2) sgemm_warp_tiling_swizzle(
     float sum[TM * TN]{0.0};
 
     // The values that need to use in runtime.
-    RuntimeHelper<BM, BN, BK, WM, WN, TM, TN> rh{};
+    RuntimeHelper<BM, BN, BK, WM, WN, TM, TN> rh(2, 9);
 
     // BlockTile: Load from GMEM -> SMEM;
     for (int kb = 0; kb < K; kb += BK) {
@@ -502,10 +502,10 @@ __global__ void __launch_bounds__(256, 2) sgemm_warp_tiling_swizzle(
             int global_row = rh.block_row + share_row;
             int global_col = kb + share_col;
             float4 global_A = *reinterpret_cast<const float4 *>(&A[global_row * ldA + global_col]);
-            As[GET_A(share_col, share_row)] = global_A.x;
-            As[GET_A(share_col + 1, share_row)] = global_A.y;
-            As[GET_A(share_col + 2, share_row)] = global_A.z;
-            As[GET_A(share_col + 3, share_row)] = global_A.w;
+            As[rh.get_swz(get_2d_offset<BM>(share_col, share_row))] = global_A.x;
+            As[rh.get_swz(get_2d_offset<BM>(share_col + 1, share_row))] = global_A.y;
+            As[rh.get_swz(get_2d_offset<BM>(share_col + 2, share_row))] = global_A.z;
+            As[rh.get_swz(get_2d_offset<BM>(share_col + 3, share_row))] = global_A.w;
         }
         for (int idx = rh.tid * 4; idx < BK * BN; idx += rh.num_threads * 4) {
             int share_row = idx / BN;
@@ -520,7 +520,7 @@ __global__ void __launch_bounds__(256, 2) sgemm_warp_tiling_swizzle(
         for (int kt = 0; kt < BK; kt++) {
 #pragma unroll
             for (int ki = 0; ki < TM; ki += 4) {
-                *reinterpret_cast<float4 *>(&regA[ki]) = *reinterpret_cast<const float4 *>(&As[GET_A(kt, rh.row_A + ki)]);
+                *reinterpret_cast<float4 *>(&regA[ki]) = *reinterpret_cast<const float4 *>(&As[rh.get_swz(get_2d_offset<BM>(kt, rh.row_A + ki))]);
             }
 #pragma unroll
             for (int ki = 0; ki < TN; ki += 4) {
@@ -572,9 +572,7 @@ __device__ void load_gmem_to_smem(
     float **As_buf, float **Bs_buf,
     const float *A, const float *B,
     RuntimeHelper<BM, BN, BK, WM, WN, TM, TN> &rh) {
-// Swizzle<3, 2, 6> swz;
-#define GET_OFFSET(rown, row, col) (row) * (rown) + (col)
-#define GET_SWZ(num) ((((num) >> 9) << 2) ^ (num))
+    // Swizzle<3, 2, 6> swz;
 
     for (int idx = rh.tid * 4; idx < BM * BK; idx += rh.num_threads * 4) {
         int share_row = idx / BK;
@@ -582,10 +580,10 @@ __device__ void load_gmem_to_smem(
         int global_row = rh.block_row + share_row;
         int global_col = kb + share_col;
         float4 global_A = __ldg(reinterpret_cast<const float4 *>(&A[global_row * ldA + global_col]));
-        As_buf[smem][GET_SWZ(GET_OFFSET(BM, share_col, share_row))] = global_A.x;
-        As_buf[smem][GET_SWZ(GET_OFFSET(BM, share_col + 1, share_row))] = global_A.y;
-        As_buf[smem][GET_SWZ(GET_OFFSET(BM, share_col + 2, share_row))] = global_A.z;
-        As_buf[smem][GET_SWZ(GET_OFFSET(BM, share_col + 3, share_row))] = global_A.w;
+        As_buf[smem][rh.get_swz(get_2d_offset<BM>(share_col, share_row))] = global_A.x;
+        As_buf[smem][rh.get_swz(get_2d_offset<BM>(share_col + 1, share_row))] = global_A.y;
+        As_buf[smem][rh.get_swz(get_2d_offset<BM>(share_col + 2, share_row))] = global_A.z;
+        As_buf[smem][rh.get_swz(get_2d_offset<BM>(share_col + 3, share_row))] = global_A.w;
     }
     for (int idx = rh.tid * 4; idx < BK * BN; idx += rh.num_threads * 4) {
         int share_row = idx / BN;
@@ -602,13 +600,11 @@ __device__ void load_smem_to_reg(
     float (*regA)[TM], float **As_buf,
     float (*regB)[TN], float **Bs_buf,
     RuntimeHelper<BM, BN, BK, WM, WN, TM, TN> &rh) {
-// Swizzle<3, 2, 6> swz;
-#define GET_OFFSET(rown, row, col) (row) * (rown) + (col)
-#define GET_SWZ(num) ((((num) >> 9) << 2) ^ (num))
+    // Swizzle<3, 2, 6> swz;
 
 #pragma unroll
     for (int ki = 0; ki < TM; ki += 4) {
-        *reinterpret_cast<float4 *>(&regA[reg][ki]) = *reinterpret_cast<const float4 *>(&As_buf[smem][GET_SWZ(GET_OFFSET(BM, kt, rh.row_A + ki))]);
+        *reinterpret_cast<float4 *>(&regA[reg][ki]) = *reinterpret_cast<const float4 *>(&As_buf[smem][rh.get_swz(get_2d_offset<BM>(kt, rh.row_A + ki))]);
     }
 #pragma unroll
     for (int ki = 0; ki < TN; ki += 4) {
@@ -616,7 +612,7 @@ __device__ void load_smem_to_reg(
     }
 }
 
-template <int BM, int BN, int BK, int WM, int WN, int TM, int TN>
+template <int TM, int TN>
 __device__ void compute_result(
     int reg, float *sum, float (*regA)[TM], float (*regB)[TN]) {
 #pragma unroll
@@ -628,23 +624,23 @@ __device__ void compute_result(
     }
 }
 
-template <int BM, int BN, int BK, int WM, int WN, int TM, int TN>
+template <int TM, int TN>
 __device__ void store_back_result(
     const int M, const int ldC,
     const float alpha, const float beta,
     float *sum, float *C,
-    RuntimeHelper<BM, BN, BK, WM, WN, TM, TN> &rh) {
+    int res_row, int res_col) {
 #pragma unroll
     for (int i = 0; i < TM; i++) {
-        if ((rh.res_row + i) < M) {
+        if ((res_row + i) < M) {
 #pragma unroll
             for (int j = 0; j < TN; j += 4) {
-                float4 tempC = *reinterpret_cast<float4 *>(&C[(rh.res_row + i) * ldC + (rh.res_col + j)]);
+                float4 tempC = *reinterpret_cast<float4 *>(&C[(res_row + i) * ldC + (res_col + j)]);
                 tempC.x = alpha * sum[i * TN + j] + beta * tempC.x;
                 tempC.y = alpha * sum[i * TN + j + 1] + beta * tempC.y;
                 tempC.z = alpha * sum[i * TN + j + 2] + beta * tempC.z;
                 tempC.w = alpha * sum[i * TN + j + 3] + beta * tempC.w;
-                *reinterpret_cast<float4 *>(&C[(rh.res_row + i) * ldC + (rh.res_col + j)]) = tempC;
+                *reinterpret_cast<float4 *>(&C[(res_row + i) * ldC + (res_col + j)]) = tempC;
             }
         }
     }
@@ -672,7 +668,7 @@ __global__ void __launch_bounds__(256, 2) sgemm_dbo_warp_tiling_swizzle(
     float sum[TM * TN]{0.0};
 
     // Calculate the runtime parameters.
-    RuntimeHelper<BM, BN, BK, WM, WN, TM, TN> rh{};
+    RuntimeHelper<BM, BN, BK, WM, WN, TM, TN> rh(2, 9);
 
     // === smem Prologue
     bool cur_smem = 0;
@@ -692,10 +688,10 @@ __global__ void __launch_bounds__(256, 2) sgemm_dbo_warp_tiling_swizzle(
         for (int kt = 1; kt < BK; kt++) {
             bool next_reg = !cur_reg;
             load_smem_to_reg<BM, BN, BK, WM, WN, TM, TN>(next_reg, cur_smem, kt, regA, As_buf, regB, Bs_buf, rh);
-            compute_result<BM, BN, BK, WM, WN, TM, TN>(cur_reg, sum, regA, regB);
+            compute_result<TM, TN>(cur_reg, sum, regA, regB);
             cur_reg = next_reg;
         }
-        compute_result<BM, BN, BK, WM, WN, TM, TN>(cur_reg, sum, regA, regB);
+        compute_result<TM, TN>(cur_reg, sum, regA, regB);
         __syncthreads();
         cur_smem = next_smem;
     }
@@ -709,12 +705,12 @@ __global__ void __launch_bounds__(256, 2) sgemm_dbo_warp_tiling_swizzle(
     for (int kt = 1; kt < BK; kt++) {
         bool next_reg = !cur_reg;
         load_smem_to_reg<BM, BN, BK, WM, WN, TM, TN>(next_reg, cur_smem, kt, regA, As_buf, regB, Bs_buf, rh);
-        compute_result<BM, BN, BK, WM, WN, TM, TN>(cur_reg, sum, regA, regB);
+        compute_result<TM, TN>(cur_reg, sum, regA, regB);
         cur_reg = next_reg;
     }
-    compute_result<BM, BN, BK, WM, WN, TM, TN>(cur_reg, sum, regA, regB);
+    compute_result<TM, TN>(cur_reg, sum, regA, regB);
     // === write back.
-    store_back_result<BM, BN, BK, WM, WN, TM, TN>(M, ldC, alpha, beta, sum, C, rh);
+    store_back_result<TM, TN>(M, ldC, alpha, beta, sum, C, rh.res_row, rh.res_col);
 }
 
 template <int BM, int BN, int BK, int WM, int WN, int TM, int TN>
