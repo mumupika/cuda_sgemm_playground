@@ -32,8 +32,8 @@ run_kernel(int const M, int const N, int const K,
     KERNEL(6)      \
     KERNEL(7)      \
     KERNEL(8)      \
-    KERNEL(9)       \
-    KERNEL(10)      \
+    KERNEL(9)      \
+    KERNEL(10)     \
     KERNEL(11)
 
 KERNEL_GEN

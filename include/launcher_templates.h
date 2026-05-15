@@ -478,9 +478,9 @@ __global__ void __launch_bounds__(256, 2) sgemm_warp_tiling_swizzle(
     float alpha,
     const float *A, const float *B,
     float beta, float *C) {
-    // swizzle Calculation. 
-    #define GET_A(col, row) ((col) * BM + ((row) ^ ((col) & ~3)))       // Swizzle<3, 2, 7> swz;
-    
+// swizzle Calculation.
+#define GET_A(col, row) ((col) * BM + ((row) ^ ((col) & ~3))) // Swizzle<3, 2, 7> swz;
+
     // Shared memory Allocation. No padding needed.
     extern __shared__ float smem[];
     float *As = smem;
@@ -490,7 +490,7 @@ __global__ void __launch_bounds__(256, 2) sgemm_warp_tiling_swizzle(
     float regA[TM];
     float regB[TN];
     float sum[TM * TN]{0.0};
-    
+
     // The values that need to use in runtime.
     RuntimeHelper<BM, BN, BK, WM, WN, TM, TN> rh{};
 

@@ -27,7 +27,7 @@ void GetProperties() {
     printf("maxGridSize: (%d, %d, %d)\n", prop->maxGridSize[0], prop->maxGridSize[1], prop->maxGridSize[2]);
     printf("maxBlocksPerSM: %d\n", prop->maxBlocksPerMultiProcessor);
     printf("SharedMemPerSM: %lu\n", prop->sharedMemPerMultiprocessor);
-    printf("RegsPerSM: %d\n", prop -> regsPerMultiprocessor);
+    printf("RegsPerSM: %d\n", prop->regsPerMultiprocessor);
     printf("maxThreadsPerSM: %d\n", prop->maxThreadsPerMultiProcessor);
     printf("max Concurrent kers: %d\n", prop->concurrentKernels);
     printf("async engine cnt: %d\n", prop->asyncEngineCount);

@@ -42,8 +42,8 @@ void check_data(
 void check_cpu_result(
     int const M, int const N, // Dimensions;
     int const ldC,
-    float const *reference,   // Host reference data;
-    float const *dC           // Device Data;
+    float const *reference, // Host reference data;
+    float const *dC         // Device Data;
 );
 
 /**
