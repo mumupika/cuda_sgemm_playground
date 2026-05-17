@@ -478,8 +478,8 @@ __global__ void __launch_bounds__(256, 2) sgemm_warp_tiling_swizzle(
     float alpha,
     const float *A, const float *B,
     float beta, float *C) {
-// swizzle Calculation.
-#define GET_A(col, row) ((col) * BM + ((row) ^ ((col) & ~3))) // Swizzle<3, 2, 7> swz;
+    // swizzle Calculation.
+    // Swizzle<3, 2, 7> swz;
 
     // Shared memory Allocation. No padding needed.
     extern __shared__ float smem[];
@@ -501,7 +501,7 @@ __global__ void __launch_bounds__(256, 2) sgemm_warp_tiling_swizzle(
             int share_col = idx % BK;
             int global_row = rh.block_row + share_row;
             int global_col = kb + share_col;
-            float4 global_A = *reinterpret_cast<const float4 *>(&A[global_row * ldA + global_col]);
+            float4 global_A = __ldg(reinterpret_cast<const float4 *>(&A[global_row * ldA + global_col]));
             As[rh.get_swz(get_2d_offset<BM>(share_col, share_row))] = global_A.x;
             As[rh.get_swz(get_2d_offset<BM>(share_col + 1, share_row))] = global_A.y;
             As[rh.get_swz(get_2d_offset<BM>(share_col + 2, share_row))] = global_A.z;
@@ -512,8 +512,7 @@ __global__ void __launch_bounds__(256, 2) sgemm_warp_tiling_swizzle(
             int share_col = idx % BN;
             int global_row = kb + share_row;
             int global_col = rh.block_col + share_col;
-            float4 global_B = *reinterpret_cast<const float4 *>(&B[global_row * ldB + global_col]);
-            *reinterpret_cast<float4 *>(&Bs[share_row * BN + share_col]) = global_B;
+            *reinterpret_cast<float4 *>(&Bs[share_row * BN + share_col]) = __ldg(reinterpret_cast<const float4 *>(&B[global_row * ldB + global_col]));
         }
         __syncthreads();
 #pragma unroll
