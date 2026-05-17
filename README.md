@@ -42,8 +42,8 @@ kernel 6 average elapsed time: 7.633501 ms, Calculate capability: 18004.708150 G
 kernel 7 average elapsed time: 5.161574 ms, Calculate capability: 26627.331854 GFlops/s.
 kernel 8 average elapsed time: 3.975248 ms, Calculate capability: 34573.680276 GFlops/s.
 kernel 9 average elapsed time: 3.866275 ms, Calculate capability: 35548.155957 GFlops/s.
-kernel 10 average elapsed time: 3.765434 ms, Calculate capability: 36500.166326 GFlops/s.
-kernel 11 average elapsed time: 4.220182 ms, Calculate capability: 32567.064971 GFlops/s.
+kernel 10 average elapsed time: 3.584602 ms, Calculate capability: 38341.486723 GFlops/s.
+kernel 11 average elapsed time: 4.211968 ms, Calculate capability: 32630.579534 GFlops/s.
 ```
 
 ## Roadmaps
